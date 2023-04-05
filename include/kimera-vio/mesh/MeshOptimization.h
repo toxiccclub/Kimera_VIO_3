@@ -15,15 +15,14 @@
 
 #pragma once
 
-#include <map>
-#include <vector>
-
-#include <Eigen/Core>
-
-#include <opencv2/opencv.hpp>
-
 #include <gtsam/geometry/Cal3_S2.h>
 #include <gtsam/geometry/Pose3.h>
+
+#include <Eigen/Core>
+#include <map>
+#include <opencv2/opencv.hpp>
+#include <opencv2/viz.hpp>
+#include <vector>
 
 #include "kimera-vio/common/vio_types.h"
 #include "kimera-vio/frontend/Camera.h"

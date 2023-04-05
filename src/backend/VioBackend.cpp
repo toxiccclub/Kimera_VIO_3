@@ -29,14 +29,14 @@
 
 #include "kimera-vio/backend/VioBackend.h"
 
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+
 #include <limits>  // for numeric_limits<>
 #include <map>
 #include <string>
 #include <utility>  // for make_pair
 #include <vector>
-
-#include <gflags/gflags.h>
-#include <glog/logging.h>
 
 #include "kimera-vio/common/VioNavState.h"
 #include "kimera-vio/imu-frontend/ImuFrontend-definitions.h"  // for safeCast
@@ -131,7 +131,9 @@ VioBackend::VioBackend(const Pose3& B_Pose_leftCam,
 /* -------------------------------------------------------------------------- */
 BackendOutput::UniquePtr VioBackend::spinOnce(const BackendInput& input) {
   if (VLOG_IS_ON(10)) input.print();
-
+  LOG(INFO) << "VioBackend::spinOnce " << input.timestamp_;
+  // std::cout << "spin once" << input.timestamp_;
+  // new_imu_prior_and_other_factors_.print();
   bool backend_status = false;
   switch (backend_state_) {
     case BackendState::Bootstrap: {
@@ -269,6 +271,9 @@ bool VioBackend::addVisualInertialStateAndOptimize(
     boost::optional<gtsam::Pose3> stereo_ransac_body_pose) {
   debug_info_.resetAddedFactorsStatistics();
 
+  //  std::cout << "addVisualInertialStateAndOptimize0 " << last_kf_id_ << " "
+  //            << curr_kf_id_ << "\n";
+
   // Features and IMU line up --> do iSAM update
   last_kf_id_ = curr_kf_id_;
   ++curr_kf_id_;
@@ -315,6 +320,10 @@ bool VioBackend::addVisualInertialStateAndOptimize(
     printFeatureTracks();
   }
 
+  //  std::cout << "addVisualInertialStateAndOptimize " << last_kf_id_ << " "
+  //            << curr_kf_id_ << "\n";
+  //  new_imu_prior_and_other_factors_.print();
+
   // decide which factors to add
   const TrackingStatus& kfTrackingStatus_mono =
       status_smart_stereo_measurements_kf.first.kfTrackingStatus_mono_;
@@ -355,11 +364,15 @@ bool VioBackend::addVisualInertialStateAndOptimize(const BackendInput& input) {
   bool use_stereo_btw_factor =
       backend_params_.addBetweenStereoFactors_ &&
       input.stereo_tracking_status_ == TrackingStatus::VALID;
+
+  LOG(INFO) << "VioBackend::addVisualInertialStateAndOptimize(const "
+               "BackendInput& input)";
   VLOG(10) << "Add visual inertial state and optimize.";
   VLOG_IF(10, use_stereo_btw_factor) << "Using stereo between factor.";
-  LOG_IF(WARNING, use_stereo_btw_factor && 
-                  input.stereo_ransac_body_pose_ == boost::none)
-      << "User set useStereoBetweenFactor = true, but stereo_ransac_body_pose_ not available!"; 
+  LOG_IF(WARNING,
+         use_stereo_btw_factor && input.stereo_ransac_body_pose_ == boost::none)
+      << "User set useStereoBetweenFactor = true, but stereo_ransac_body_pose_ "
+         "not available!";
   CHECK(input.status_stereo_measurements_kf_);
   CHECK(input.pim_);
   bool is_smoother_ok = addVisualInertialStateAndOptimize(
@@ -813,6 +826,7 @@ void VioBackend::addBetweenFactor(const FrameId& from_id,
                                   const FrameId& to_id,
                                   const gtsam::Pose3& from_id_POSE_to_id) {
   // TODO(Toni): make noise models const members of Backend...
+  LOG(INFO) << "addBetweenFactor " << from_id << " " << to_id;
   Vector6 precisions;
   precisions.head<3>().setConstant(backend_params_.betweenRotationPrecision_);
   precisions.tail<3>().setConstant(
@@ -827,6 +841,8 @@ void VioBackend::addBetweenFactor(const FrameId& from_id,
           from_id_POSE_to_id,
           betweenNoise_));
 
+  //  std::cout << "addBetweenFactor " << from_id << " " << to_id << "\n";
+  //  new_imu_prior_and_other_factors_.print();
   debug_info_.numAddedBetweenStereoF_++;
 }
 
@@ -868,6 +884,7 @@ bool VioBackend::optimize(
     const FrameId& cur_id,
     const size_t& max_extra_iterations,
     const gtsam::FactorIndices& extra_factor_slots_to_delete) {
+  LOG(INFO) << "VioBackend::optimize";
   DCHECK(smoother_) << "Incremental smoother is a null pointer.";
 
   // Only for statistics and debugging.
@@ -1010,6 +1027,10 @@ bool VioBackend::optimize(
   VLOG(10) << "iSAM2 update with " << new_factors_tmp.size() << " new factors "
            << ", " << new_values_.size() << " new values "
            << ", and " << delete_slots.size() << " deleted factors.";
+
+  //  std::cout << "new_factors_tmp\n";
+  //  new_factors_tmp.print();
+
   Smoother::Result result;
   VLOG(10) << "Starting first update.";
   bool is_smoother_ok = updateSmoother(
@@ -1086,6 +1107,7 @@ bool VioBackend::optimize(
 /// Private methods.
 /* -------------------------------------------------------------------------- */
 void VioBackend::addInitialPriorFactors(const FrameId& frame_id) {
+  LOG(INFO) << "addInitialPriorFactors " << frame_id;
   // Set initial covariance for inertial factors
   // W_Pose_Blkf_ set by motion capture to start with
   Matrix3 B_Rot_W = W_Pose_B_lkf_.rotation().matrix().transpose();
@@ -1150,6 +1172,8 @@ void VioBackend::addInitialPriorFactors(const FrameId& frame_id) {
           imu_bias_prior_noise));
 
   VLOG(2) << "Added initial priors for frame " << frame_id;
+
+  // new_imu_prior_and_other_factors_.print();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1203,6 +1227,17 @@ bool VioBackend::updateSmoother(Smoother::Result* result,
   // This is not doing a full deep copy: it is keeping same shared_ptrs for
   // factors but copying the isam result.
   Smoother smoother_backup(*smoother_);
+
+  //  std::cout << "===================================Update "
+  //               "smoother==================================\n";
+  //  new_factors.print("updateSmoother");
+  //  std::cout << "===================================Update smoother values "
+  //            << new_values.size() << "\n";
+  //  for (auto v : new_values) {
+  //    std::cout << v.key << "=";
+  //    v.value.print();
+  //    std::cout << "\n";
+  //  }
 
   bool got_cheirality_exception = false;
   gtsam::Symbol lmk_symbol_cheirality;

@@ -22,7 +22,6 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/slam/ProjectionFactor.h>
 
@@ -153,6 +152,10 @@ bool RegularVioBackend::addVisualInertialStateAndOptimize(
     boost::optional<gtsam::Pose3> stereo_ransac_body_pose) {
   debug_info_.resetAddedFactorsStatistics();
 
+  //  std::cout << "addVisualInertialStateAndOptimize " << last_kf_id_ << " "
+  //            << curr_kf_id_ << "\n";
+  //  new_imu_prior_and_other_factors_.print();
+
   // if (VLOG_IS_ON(20)) {
   //  StereoVisionImuFrontend::PrintStatusStereoMeasurements(
   //                                        status_smart_stereo_measurements_kf);
@@ -161,6 +164,10 @@ bool RegularVioBackend::addVisualInertialStateAndOptimize(
   // Features and IMU line up --> do iSAM update.
   last_kf_id_ = curr_kf_id_;
   ++curr_kf_id_;
+
+  LOG(INFO) << "RegularVioBackend::addVisualInertialStateAndOptimize "
+            << last_kf_id_ << " " << curr_kf_id_
+            << UtilsNumerical::NsecToSec(timestamp_kf_nsec);
 
   VLOG(7) << "Processing keyframe " << curr_kf_id_
           << " at timestamp: " << UtilsNumerical::NsecToSec(timestamp_kf_nsec)
@@ -219,13 +226,13 @@ bool RegularVioBackend::addVisualInertialStateAndOptimize(
     default: {
       kfTrackingStatus_mono == TrackingStatus::VALID
           ? VLOG(1) << "Tracker has a VALID status."
-          : kfTrackingStatus_mono == TrackingStatus::FEW_MATCHES
-                ? VLOG(1) << "Tracker has a FEW_MATCHES status."
-                : kfTrackingStatus_mono == TrackingStatus::INVALID
-                      ? VLOG(1) << "Tracker has a INVALID status."
-                      : kfTrackingStatus_mono == TrackingStatus::DISABLED
-                            ? VLOG(1) << "Tracker has a DISABLED status."
-                            : VLOG(10) << "";
+      : kfTrackingStatus_mono == TrackingStatus::FEW_MATCHES
+          ? VLOG(1) << "Tracker has a FEW_MATCHES status."
+      : kfTrackingStatus_mono == TrackingStatus::INVALID
+          ? VLOG(1) << "Tracker has a INVALID status."
+      : kfTrackingStatus_mono == TrackingStatus::DISABLED
+          ? VLOG(1) << "Tracker has a DISABLED status."
+          : VLOG(10) << "";
 
       if (kfTrackingStatus_mono == TrackingStatus::VALID) {
         // Extract lmk ids that are involved in a regularity.
@@ -354,6 +361,11 @@ bool RegularVioBackend::addVisualInertialStateAndOptimize(
   /////////////////// OPTIMIZE /////////////////////////////////////////////////
   // This lags 1 step behind to mimic hw.
   imu_bias_prev_kf_ = imu_bias_lkf_;
+
+  //  std::cout << "addVisualInertialStateAndOptimize opt " << last_kf_id_ << "
+  //  "
+  //            << curr_kf_id_ << "\n";
+  //  new_imu_prior_and_other_factors_.print();
 
   VLOG(10) << "Starting optimize...";
   bool is_smoother_ok = optimize(timestamp_kf_nsec,
@@ -878,8 +890,9 @@ bool RegularVioBackend::updateLmkIdIsSmart(
   if (std::find(lmk_ids_with_regularity.begin(),
                 lmk_ids_with_regularity.end(),
                 lmk_id) == lmk_ids_with_regularity.end()) {
-    VLOG(20) << "Lmk_id = " << lmk_id << " needs to stay as it is since it is "
-                                         "NOT involved in any regularity.";
+    VLOG(20) << "Lmk_id = " << lmk_id
+             << " needs to stay as it is since it is "
+                "NOT involved in any regularity.";
     // This lmk is not involved in any regularity.
     if (lmk_id_slot == lmk_id_is_smart->end()) {
       // We did not find the lmk_id in the lmk_id_is_smart_ map.
@@ -892,8 +905,9 @@ bool RegularVioBackend::updateLmkIdIsSmart(
   } else {
     // This lmk is involved in a regularity, hence it should be a variable in
     // the factor graph (connected to projection factor).
-    VLOG(20) << "Lmk_id = " << lmk_id << " needs to be a proj. factor, as it "
-                                         "is involved in a regularity.";
+    VLOG(20) << "Lmk_id = " << lmk_id
+             << " needs to be a proj. factor, as it "
+                "is involved in a regularity.";
     const auto& old_smart_factors_it = old_smart_factors_.find(lmk_id);
     if (old_smart_factors_it == old_smart_factors_.end()) {
       // This should only happen if the lmk was already in a regularity,

@@ -12,11 +12,12 @@
  * @author Antoni Rosinol
  */
 
-#include <string>
-
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+
+#include <opencv2/viz.hpp>
+#include <string>
 
 #include "kimera-vio/common/vio_types.h"
 #include "kimera-vio/dataprovider/EurocDataProvider.h"

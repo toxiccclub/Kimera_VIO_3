@@ -14,14 +14,14 @@
 
 #pragma once
 
+#include <glog/logging.h>
+
 #include <atomic>
 #include <functional>  // for function
 #include <memory>
 #include <string>
 #include <utility>  // for move
 #include <vector>
-
-#include <glog/logging.h>
 
 #include "kimera-vio/common/vio_types.h"
 #include "kimera-vio/pipeline/PipelinePayload.h"
@@ -187,6 +187,7 @@ class PipelineModule : public PipelineModuleBase {
    * it returns false.
    */
   bool spin() override {
+    LOG(INFO) << "spin() override";
     VLOG_IF(1, parallel_run_) << "Module: " << name_id_ << " - Spinning.";
     utils::StatsCollector timing_stats(name_id_ + " [ms]");
     while (!shutdown_) {
@@ -214,8 +215,8 @@ class PipelineModule : public PipelineModuleBase {
         auto spin_duration = utils::Timer::toc(tic).count();
         timing_stats.AddSample(spin_duration);
       } else {
-        LOG_IF(WARNING, VLOG_IS_ON(1)) << "Module: " << name_id_
-                                       << " - No Input received.";
+        LOG_IF(WARNING, VLOG_IS_ON(1))
+            << "Module: " << name_id_ << " - No Input received.";
       }
 
       // Break the while loop if we are in sequential mode.

@@ -29,6 +29,7 @@ VioBackendModule::OutputUniquePtr VioBackendModule::spinOnce(
     BackendInput::UniquePtr input) {
   CHECK(input);
   CHECK(vio_backend_);
+  LOG(INFO) << "VioBackendModule::spinOnce";
   OutputUniquePtr output = vio_backend_->spinOnce(*input);
   if (!output) {
     LOG(ERROR) << "Backend did not return an output: shutting down Backend.";

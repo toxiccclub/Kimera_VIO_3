@@ -14,23 +14,23 @@
  * @author Marcus Abate
  */
 
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+#include <gtest/gtest.h>
+
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <random>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-#include <gtest/gtest.h>
-
+#include "kimera-vio/frontend/Camera.h"
 #include "kimera-vio/frontend/CameraParams.h"
 #include "kimera-vio/frontend/Frame.h"
 #include "kimera-vio/frontend/StereoFrame.h"
-#include "kimera-vio/frontend/feature-detector/FeatureDetector.h"
-#include "kimera-vio/frontend/Camera.h"
 #include "kimera-vio/frontend/StereoMatcher.h"
 #include "kimera-vio/frontend/Tracker-definitions.h"
 #include "kimera-vio/frontend/Tracker.h"
+#include "kimera-vio/frontend/feature-detector/FeatureDetector.h"
 #include "kimera-vio/utils/Timer.h"
 
 DECLARE_string(test_data_path);
@@ -93,12 +93,12 @@ class TestTracker : public ::testing::Test {
     ref_stereo_frame = std::make_shared<StereoFrame>(
         id_ref,
         timestamp_ref,
-        Frame(id_ref,
-              timestamp_ref,
-              cam_params_left, 
-              UtilsOpenCV::ReadAndConvertToGrayScale(
-                  img_name_ref_left, 
-                  tp.stereo_matching_params_.equalize_image_)),
+        Frame(
+            id_ref,
+            timestamp_ref,
+            cam_params_left,
+            UtilsOpenCV::ReadAndConvertToGrayScale(
+                img_name_ref_left, tp.stereo_matching_params_.equalize_image_)),
         Frame(id_ref,
               timestamp_ref,
               cam_params_right,
@@ -109,12 +109,12 @@ class TestTracker : public ::testing::Test {
     cur_stereo_frame = std::make_shared<StereoFrame>(
         id_cur,
         timestamp_cur,
-        Frame(id_cur,
-              timestamp_cur,
-              cam_params_left, 
-              UtilsOpenCV::ReadAndConvertToGrayScale(
-                  img_name_cur_left, 
-                  tp.stereo_matching_params_.equalize_image_)),
+        Frame(
+            id_cur,
+            timestamp_cur,
+            cam_params_left,
+            UtilsOpenCV::ReadAndConvertToGrayScale(
+                img_name_cur_left, tp.stereo_matching_params_.equalize_image_)),
         Frame(id_cur,
               timestamp_cur,
               cam_params_right,
@@ -126,14 +126,13 @@ class TestTracker : public ::testing::Test {
         std::make_shared<VIO::StereoCamera>(cam_params_left, cam_params_right);
     stereo_matcher_ = VIO::make_unique<VIO::StereoMatcher>(
         stereo_camera_, tp.stereo_matching_params_);
-    tracker_ = VIO::make_unique<Tracker>(tracker_params_, stereo_camera_->getOriginalLeftCamera());
+    tracker_ = VIO::make_unique<VIO::Tracker>(
+        tracker_params_, stereo_camera_->getOriginalLeftCamera());
 
-    feature_detector_ = VIO::make_unique<VIO::FeatureDetector>(
-        tp.feature_detector_params_);
-    feature_detector_->featureDetection(
-        &ref_stereo_frame->left_frame_);
-    feature_detector_->featureDetection(
-        &cur_stereo_frame->left_frame_);
+    feature_detector_ =
+        VIO::make_unique<VIO::FeatureDetector>(tp.feature_detector_params_);
+    feature_detector_->featureDetection(&ref_stereo_frame->left_frame_);
+    feature_detector_->featureDetection(&cur_stereo_frame->left_frame_);
 
     stereo_matcher_->sparseStereoReconstruction(ref_stereo_frame.get());
     stereo_matcher_->sparseStereoReconstruction(cur_stereo_frame.get());
@@ -217,7 +216,8 @@ class TestTracker : public ::testing::Test {
       // Randomly synthesize the point!
       KeypointCV pt_ref(rand() % f_ref->img_.cols, rand() % f_ref->img_.rows);
       // Calibrate the point
-      Vector3 versor_ref = UndistorterRectifier::UndistortKeypointAndGetVersor(pt_ref, f_ref->cam_param_);
+      Vector3 versor_ref = UndistorterRectifier::UndistortKeypointAndGetVersor(
+          pt_ref, f_ref->cam_param_);
 
       // Compute the intersection between the versor and the plane.
       Vector3 versor_plane = IntersectVersorPlane(versor_ref, PlaneN, PlaneD);
@@ -254,12 +254,12 @@ class TestTracker : public ::testing::Test {
       KeypointCV pt_ref(rand() % f_ref->img_.cols, rand() % f_ref->img_.rows);
 
       // Calibrate the point
-      Vector3 versor_ref = UndistorterRectifier::UndistortKeypointAndGetVersor(pt_ref, f_ref->cam_param_);
+      Vector3 versor_ref = UndistorterRectifier::UndistortKeypointAndGetVersor(
+          pt_ref, f_ref->cam_param_);
 
       // Randomly generate the depth
-      double depth =
-          depth_range[0] +
-          (depth_range[1] - depth_range[0]) * ((double)rand() / RAND_MAX);
+      double depth = depth_range[0] + (depth_range[1] - depth_range[0]) *
+                                          ((double)rand() / RAND_MAX);
 
       // project to the current frame!
       Vector3 versor_cur =
@@ -294,8 +294,12 @@ class TestTracker : public ::testing::Test {
         KeypointCV pt_cur(rand() % f_cur->img_.cols, rand() % f_cur->img_.rows);
 
         // Calibrate keypoints
-        Vector3 versor_ref = UndistorterRectifier::UndistortKeypointAndGetVersor(pt_ref, f_ref->cam_param_);
-        Vector3 versor_cur = UndistorterRectifier::UndistortKeypointAndGetVersor(pt_cur, f_cur->cam_param_);
+        Vector3 versor_ref =
+            UndistorterRectifier::UndistortKeypointAndGetVersor(
+                pt_ref, f_ref->cam_param_);
+        Vector3 versor_cur =
+            UndistorterRectifier::UndistortKeypointAndGetVersor(
+                pt_cur, f_cur->cam_param_);
 
         // Check that they are indeed outliers!
         double depth = camRef_pose_camCur.translation().norm();
@@ -346,34 +350,29 @@ class TestTracker : public ::testing::Test {
     // create ref stereo camera
     VIO::StereoCamera ref_stereo_camera(sf_ref->left_frame_.cam_param_,
                                         sf_ref->right_frame_.cam_param_);
-    Rot3 camLrect_R_camL = UtilsOpenCV::cvMatToGtsamRot3(
-        ref_stereo_camera.getR1());
-    gtsam::StereoCamera stereoCam = 
+    Rot3 camLrect_R_camL =
+        UtilsOpenCV::cvMatToGtsamRot3(ref_stereo_camera.getR1());
+    gtsam::StereoCamera stereoCam =
         gtsam::StereoCamera(Pose3(), ref_stereo_camera.getStereoCalib());
 
     StereoPoint2 sp2 = stereoCam.project(camLrect_R_camL.rotate(Point3(v_ref)));
     sf_ref->left_keypoints_rectified_.push_back(
-        StatusKeypointCV(KeypointStatus::VALID,
-        KeypointCV(sp2.uL(), sp2.v())));
+        StatusKeypointCV(KeypointStatus::VALID, KeypointCV(sp2.uL(), sp2.v())));
     sf_ref->right_keypoints_rectified_.push_back(
-        StatusKeypointCV(KeypointStatus::VALID,
-        KeypointCV(sp2.uR(), sp2.v())));
+        StatusKeypointCV(KeypointStatus::VALID, KeypointCV(sp2.uR(), sp2.v())));
 
     // create cur stereo camera
     VIO::StereoCamera cur_stereo_camera(sf_cur->left_frame_.cam_param_,
                                         sf_cur->right_frame_.cam_param_);
-    camLrect_R_camL = UtilsOpenCV::cvMatToGtsamRot3(
-        cur_stereo_camera.getR1());
+    camLrect_R_camL = UtilsOpenCV::cvMatToGtsamRot3(cur_stereo_camera.getR1());
     stereoCam =
         gtsam::StereoCamera(Pose3(), cur_stereo_camera.getStereoCalib());
 
     sp2 = stereoCam.project(camLrect_R_camL.rotate(Point3(v_cur)));
     sf_cur->left_keypoints_rectified_.push_back(
-        StatusKeypointCV(KeypointStatus::VALID,
-        KeypointCV(sp2.uL(), sp2.v())));
+        StatusKeypointCV(KeypointStatus::VALID, KeypointCV(sp2.uL(), sp2.v())));
     sf_cur->right_keypoints_rectified_.push_back(
-        StatusKeypointCV(KeypointStatus::VALID,
-        KeypointCV(sp2.uR(), sp2.v())));
+        StatusKeypointCV(KeypointStatus::VALID, KeypointCV(sp2.uR(), sp2.v())));
 
     // depth!
     sf_ref->keypoints_depth_.push_back(v_ref.norm());
@@ -403,9 +402,8 @@ class TestTracker : public ::testing::Test {
       Vector3 versor_ref = UndistorterRectifier::UndistortKeypointAndGetVersor(
           pt_ref, sf_ref->left_frame_.cam_param_);
       // Randomly generate the depth
-      double depth =
-          depth_range[0] +
-          (depth_range[1] - depth_range[0]) * ((double)rand() / RAND_MAX);
+      double depth = depth_range[0] + (depth_range[1] - depth_range[0]) *
+                                          ((double)rand() / RAND_MAX);
 
       versor_ref = versor_ref * depth;
 
@@ -447,17 +445,19 @@ class TestTracker : public ::testing::Test {
 
         // Calibrate keypoints
         Vector3 versor_ref =
-            UndistorterRectifier::UndistortKeypointAndGetVersor(pt_ref, sf_ref->left_frame_.cam_param_);
+            UndistorterRectifier::UndistortKeypointAndGetVersor(
+                pt_ref, sf_ref->left_frame_.cam_param_);
         Vector3 versor_cur =
-            UndistorterRectifier::UndistortKeypointAndGetVersor(pt_cur, sf_cur->left_frame_.cam_param_);
+            UndistorterRectifier::UndistortKeypointAndGetVersor(
+                pt_cur, sf_cur->left_frame_.cam_param_);
 
         // Check that they are indeed outliers!
-        double depth_ref = depth_range[0] +
-                           (depth_range[1] - depth_range[0]) *
-                               (((double)rand()) / ((double)RAND_MAX));
-        double depth_cur = depth_range[0] +
-                           (depth_range[1] - depth_range[0]) *
-                               (((double)rand()) / ((double)RAND_MAX));
+        double depth_ref =
+            depth_range[0] + (depth_range[1] - depth_range[0]) *
+                                 (((double)rand()) / ((double)RAND_MAX));
+        double depth_cur =
+            depth_range[0] + (depth_range[1] - depth_range[0]) *
+                                 (((double)rand()) / ((double)RAND_MAX));
 
         versor_ref = versor_ref * depth_ref;
         versor_cur = versor_cur * depth_cur;
@@ -556,7 +556,7 @@ class TestTracker : public ::testing::Test {
  protected:
   // Perform Ransac
   FrontendParams tracker_params_;
-  Tracker::UniquePtr tracker_;
+  VIO::Tracker::UniquePtr tracker_;
   VIO::FeatureDetector::UniquePtr feature_detector_;
 
   Frame::Ptr ref_frame, cur_frame;
@@ -619,12 +619,16 @@ TEST_F(TestTracker, geometricOutlierRejectionMono) {
         vector<double> depth_range;
         depth_range.push_back(camRef_pose_camCur.translation().norm());
         depth_range.push_back(10 * camRef_pose_camCur.translation().norm());
-        AddNonPlanarInliersToFrame(
-            ref_frame.get(), cur_frame.get(), camRef_pose_camCur, depth_range, inlier_num);
+        AddNonPlanarInliersToFrame(ref_frame.get(),
+                                   cur_frame.get(),
+                                   camRef_pose_camCur,
+                                   depth_range,
+                                   inlier_num);
       }
 
       // add outliers
-      AddOutliersToFrame(ref_frame.get(), cur_frame.get(), camRef_pose_camCur, outlier_num);
+      AddOutliersToFrame(
+          ref_frame.get(), cur_frame.get(), camRef_pose_camCur, outlier_num);
       // add noise
       if (noise_sigma != 0) {
         AddNoiseToFrame(ref_frame.get(), noise_sigma);
@@ -636,11 +640,13 @@ TEST_F(TestTracker, geometricOutlierRejectionMono) {
       trackerParams.ransac_max_iterations_ = 1000;
       // trackerParams.ransac_probability_ = 0.8;
       trackerParams.ransac_randomize_ = false;
-      Tracker tracker(trackerParams, stereo_camera_->getOriginalLeftCamera());
+      VIO::Tracker tracker(trackerParams,
+                           stereo_camera_->getOriginalLeftCamera());
       TrackingStatus tracking_status;
       Pose3 estimated_pose;
       tie(tracking_status, estimated_pose) =
-          tracker.geometricOutlierRejectionMono(ref_frame.get(), cur_frame.get());
+          tracker.geometricOutlierRejectionMono(ref_frame.get(),
+                                                cur_frame.get());
 
       EXPECT_EQ(tracking_status, TrackingStatus::VALID);
 
@@ -708,20 +714,16 @@ TEST_F(TestTracker, geometricOutlierRejectionMonoGivenRotation) {
         vector<double> depth_range;
         depth_range.push_back(camRef_pose_camCur.translation().norm());
         depth_range.push_back(10 * camRef_pose_camCur.translation().norm());
-        AddNonPlanarInliersToFrame(
-            ref_frame.get(),
-            cur_frame.get(),
-            camRef_pose_camCur,
-            depth_range,
-            inlier_num);
+        AddNonPlanarInliersToFrame(ref_frame.get(),
+                                   cur_frame.get(),
+                                   camRef_pose_camCur,
+                                   depth_range,
+                                   inlier_num);
       }
 
       // add outliers
       AddOutliersToFrame(
-          ref_frame.get(), 
-          cur_frame.get(), 
-          camRef_pose_camCur, 
-          outlier_num);
+          ref_frame.get(), cur_frame.get(), camRef_pose_camCur, outlier_num);
       // add noise
       if (noise_sigma != 0) {
         AddNoiseToFrame(ref_frame.get(), noise_sigma);
@@ -833,7 +835,8 @@ TEST_F(TestTracker, geometricOutlierRejectionStereo) {
 
       FrontendParams trackerParams;
       trackerParams.ransac_threshold_stereo_ = 0.3;
-      Tracker tracker(trackerParams, stereo_camera_->getOriginalLeftCamera());
+      VIO::Tracker tracker(trackerParams,
+                           stereo_camera_->getOriginalLeftCamera());
       TrackingStatus tracking_status;
       Pose3 estimated_pose;
       tie(tracking_status, estimated_pose) =
@@ -845,28 +848,32 @@ TEST_F(TestTracker, geometricOutlierRejectionStereo) {
         EXPECT_EQ(ref_stereo_frame->right_keypoints_rectified_.at(i).first,
                   KeypointStatus::VALID);
         EXPECT_NE(ref_stereo_frame->keypoints_depth_.at(i), 0.0);
-        EXPECT_GT((ref_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
-                  tol);
+        EXPECT_GT(
+            (ref_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
+            tol);
 
         EXPECT_EQ(cur_stereo_frame->right_keypoints_rectified_.at(i).first,
                   KeypointStatus::VALID);
         EXPECT_NE(ref_stereo_frame->keypoints_depth_.at(i), 0.0);
-        EXPECT_GT((cur_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
-                  tol);
+        EXPECT_GT(
+            (cur_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
+            tol);
       }
 
       for (int i = inlier_num; i < inlier_num + outlier_num; i++) {
         EXPECT_EQ(ref_stereo_frame->right_keypoints_rectified_.at(i).first,
                   KeypointStatus::FAILED_ARUN);
         EXPECT_EQ(ref_stereo_frame->keypoints_depth_.at(i), 0.0);
-        EXPECT_LT((ref_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
-                  tol);
+        EXPECT_LT(
+            (ref_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
+            tol);
 
         EXPECT_EQ(cur_stereo_frame->right_keypoints_rectified_.at(i).first,
                   KeypointStatus::FAILED_ARUN);
         EXPECT_EQ(ref_stereo_frame->keypoints_depth_.at(i), 0.0);
-        EXPECT_LT((cur_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
-                  tol);
+        EXPECT_LT(
+            (cur_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
+            tol);
       }
 
       // Check the correctness of the estimated_pose!
@@ -984,28 +991,32 @@ TEST_F(TestTracker, geometricOutlierRejectionStereoGivenRotation) {
         EXPECT_EQ(ref_stereo_frame->right_keypoints_rectified_.at(i).first,
                   KeypointStatus::VALID);
         EXPECT_NE(ref_stereo_frame->keypoints_depth_.at(i), 0.0);
-        EXPECT_GT((ref_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
-                  tol);
+        EXPECT_GT(
+            (ref_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
+            tol);
 
         EXPECT_EQ(cur_stereo_frame->right_keypoints_rectified_.at(i).first,
                   KeypointStatus::VALID);
         EXPECT_NE(ref_stereo_frame->keypoints_depth_.at(i), 0.0);
-        EXPECT_GT((cur_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
-                  tol);
+        EXPECT_GT(
+            (cur_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
+            tol);
       }
 
       for (int i = inlier_num; i < inlier_num + outlier_num; i++) {
         EXPECT_EQ(ref_stereo_frame->right_keypoints_rectified_.at(i).first,
                   KeypointStatus::FAILED_ARUN);
         EXPECT_EQ(ref_stereo_frame->keypoints_depth_.at(i), 0.0);
-        EXPECT_LT((ref_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
-                  tol);
+        EXPECT_LT(
+            (ref_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
+            tol);
 
         EXPECT_EQ(cur_stereo_frame->right_keypoints_rectified_.at(i).first,
                   KeypointStatus::FAILED_ARUN);
         EXPECT_EQ(ref_stereo_frame->keypoints_depth_.at(i), 0.0);
-        EXPECT_LT((cur_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
-                  tol);
+        EXPECT_LT(
+            (cur_stereo_frame->keypoints_3d_.at(i) - Vector3::Zero()).norm(),
+            tol);
       }
 
       // Check the correctness of the estimated_pose!
@@ -1035,11 +1046,11 @@ TEST_F(TestTracker, geometricOutlierRejectionStereoGivenRotation) {
 TEST_F(TestTracker, getPoint3AndCovariance) {
   ClearStereoFrame(ref_stereo_frame.get());
   // create stereo cam
-  VIO::StereoCamera ref_stereo_camera(ref_stereo_frame->left_frame_.cam_param_,
-                                      ref_stereo_frame->right_frame_.cam_param_);
-  gtsam::StereoCamera stereoCam =
-      gtsam::StereoCamera(gtsam::Pose3::identity(),
-                          ref_stereo_camera.getStereoCalib());
+  VIO::StereoCamera ref_stereo_camera(
+      ref_stereo_frame->left_frame_.cam_param_,
+      ref_stereo_frame->right_frame_.cam_param_);
+  gtsam::StereoCamera stereoCam = gtsam::StereoCamera(
+      gtsam::Pose3::identity(), ref_stereo_camera.getStereoCalib());
 
   // create a stereo point:
   double xL = 379.999 / 2;  // in the middle of the image
@@ -1063,7 +1074,7 @@ TEST_F(TestTracker, getPoint3AndCovariance) {
   // use function to get actual answer
   Vector3 f_ref_i_expected, f_ref_i_actual;
   Matrix3 cov_ref_i_expected, cov_ref_i_actual;
-  tie(f_ref_i_actual, cov_ref_i_actual) = Tracker::getPoint3AndCovariance(
+  tie(f_ref_i_actual, cov_ref_i_actual) = VIO::Tracker::getPoint3AndCovariance(
       *ref_stereo_frame, stereoCam, pointId, stereoPtCov);
 
   // use monte carlo method to get expected answer
@@ -1108,7 +1119,7 @@ TEST_F(TestTracker, findOutliers) {
     random_shuffle(inliers.begin(), inliers.end());
 
     vector<int> outliers_actual;
-    Tracker::findOutliers(matches_ref_cur, inliers, &outliers_actual);
+    VIO::Tracker::findOutliers(matches_ref_cur, inliers, &outliers_actual);
 
     // check that outliers_actual matches outliers_expected
     EXPECT_EQ(outliers_expected.size(), outliers_actual.size());
@@ -1136,7 +1147,7 @@ TEST_F(TestTracker, findOutliers) {
     vector<pair<size_t, size_t>> matches_ref_cur(num_outliers);
 
     vector<int> outliers_actual;
-    Tracker::findOutliers(matches_ref_cur, inliers, &outliers_actual);
+    VIO::Tracker::findOutliers(matches_ref_cur, inliers, &outliers_actual);
 
     // check that outliers_actual matches outliers_expected
     EXPECT_EQ(outliers_expected.size(), outliers_actual.size());
@@ -1163,7 +1174,7 @@ TEST_F(TestTracker, findOutliers) {
     random_shuffle(inliers.begin(), inliers.end());
 
     vector<int> outliers_actual;
-    Tracker::findOutliers(matches_ref_cur, inliers, &outliers_actual);
+    VIO::Tracker::findOutliers(matches_ref_cur, inliers, &outliers_actual);
 
     // check that outliers_actual matches outliers_expected
     EXPECT_EQ(outliers_actual.size(), 0);
@@ -1213,7 +1224,7 @@ TEST_F(TestTracker, FindMatchingKeypoints) {
   random_shuffle(cur_frame->landmarks_.begin(), cur_frame->landmarks_.end());
 
   vector<pair<size_t, size_t>> matches_ref_cur;
-  Tracker::findMatchingKeypoints(*ref_frame, *cur_frame, &matches_ref_cur);
+  VIO::Tracker::findMatchingKeypoints(*ref_frame, *cur_frame, &matches_ref_cur);
 
   // Check the correctness of matches_ref_cur
   EXPECT_EQ(matches_ref_cur.size(), num_landmarks_common);
@@ -1279,10 +1290,10 @@ TEST_F(TestTracker, FindMatchingStereoKeypoints) {
   for (int i = 0; i < ref_stereo_frame->left_frame_.landmarks_.size(); i++) {
     int l_id = ref_stereo_frame->left_frame_.landmarks_[i];
     if (l_id % 6 == 0) {
-      ref_stereo_frame->right_keypoints_rectified_.at(i).first = 
+      ref_stereo_frame->right_keypoints_rectified_.at(i).first =
           KeypointStatus::VALID;
     } else {
-      ref_stereo_frame->right_keypoints_rectified_.at(i).first = 
+      ref_stereo_frame->right_keypoints_rectified_.at(i).first =
           KeypointStatus::NO_RIGHT_RECT;
     }
   }
@@ -1293,16 +1304,16 @@ TEST_F(TestTracker, FindMatchingStereoKeypoints) {
   for (int i = 0; i < cur_stereo_frame->left_frame_.landmarks_.size(); i++) {
     int l_id = cur_stereo_frame->left_frame_.landmarks_[i];
     if (l_id % 6 == 0) {
-      cur_stereo_frame->right_keypoints_rectified_.at(i).first = 
+      cur_stereo_frame->right_keypoints_rectified_.at(i).first =
           KeypointStatus::VALID;
     } else {
-      cur_stereo_frame->right_keypoints_rectified_.at(i).first = 
+      cur_stereo_frame->right_keypoints_rectified_.at(i).first =
           KeypointStatus::NO_RIGHT_RECT;
     }
   }
 
   vector<pair<size_t, size_t>> matches_ref_cur;
-  Tracker::findMatchingStereoKeypoints(
+  VIO::Tracker::findMatchingStereoKeypoints(
       *ref_stereo_frame, *cur_stereo_frame, &matches_ref_cur);
 
   // Check the correctness!
@@ -1310,8 +1321,7 @@ TEST_F(TestTracker, FindMatchingStereoKeypoints) {
   set<int> landmarks_found;
   for (auto match_ref_cur : matches_ref_cur) {
     int l_ref = ref_stereo_frame->left_frame_.landmarks_[match_ref_cur.first];
-    int l_cur =
-        cur_stereo_frame->left_frame_.landmarks_[match_ref_cur.second];
+    int l_cur = cur_stereo_frame->left_frame_.landmarks_[match_ref_cur.second];
 
     EXPECT_EQ(l_ref, l_cur);
     EXPECT_EQ(l_ref % 6, 0);
@@ -1353,15 +1363,18 @@ TEST_F(TestTracker, MahalanobisDistance) {
                       O(1, 0) * (O(0, 1) * O(2, 2) - O(0, 2) * O(2, 1)) +
                       O(2, 0) * (O(0, 1) * O(1, 2) - O(1, 1) * O(0, 2)));
     float innovationMahalanobisNorm3 =
-        dinv * v(0) * (v(0) * (O(1, 1) * O(2, 2) - O(1, 2) * O(2, 1)) -
-                       v(1) * (O(0, 1) * O(2, 2) - O(0, 2) * O(2, 1)) +
-                       v(2) * (O(0, 1) * O(1, 2) - O(1, 1) * O(0, 2))) +
-        dinv * v(1) * (O(0, 0) * (v(1) * O(2, 2) - O(1, 2) * v(2)) -
-                       O(1, 0) * (v(0) * O(2, 2) - O(0, 2) * v(2)) +
-                       O(2, 0) * (v(0) * O(1, 2) - v(1) * O(0, 2))) +
-        dinv * v(2) * (O(0, 0) * (O(1, 1) * v(2) - v(1) * O(2, 1)) -
-                       O(1, 0) * (O(0, 1) * v(2) - v(0) * O(2, 1)) +
-                       O(2, 0) * (O(0, 1) * v(1) - O(1, 1) * v(0)));
+        dinv * v(0) *
+            (v(0) * (O(1, 1) * O(2, 2) - O(1, 2) * O(2, 1)) -
+             v(1) * (O(0, 1) * O(2, 2) - O(0, 2) * O(2, 1)) +
+             v(2) * (O(0, 1) * O(1, 2) - O(1, 1) * O(0, 2))) +
+        dinv * v(1) *
+            (O(0, 0) * (v(1) * O(2, 2) - O(1, 2) * v(2)) -
+             O(1, 0) * (v(0) * O(2, 2) - O(0, 2) * v(2)) +
+             O(2, 0) * (v(0) * O(1, 2) - v(1) * O(0, 2))) +
+        dinv * v(2) *
+            (O(0, 0) * (O(1, 1) * v(2) - v(1) * O(2, 1)) -
+             O(1, 0) * (O(0, 1) * v(2) - v(0) * O(2, 1)) +
+             O(2, 0) * (O(0, 1) * v(1) - O(1, 1) * v(0)));
     time3 += VIO::utils::Timer::toc(timeBefore).count();
 
     EXPECT_NEAR(double(innovationMahalanobisNorm1),

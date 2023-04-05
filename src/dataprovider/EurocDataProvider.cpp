@@ -16,6 +16,12 @@
 
 #include "kimera-vio/dataprovider/EurocDataProvider.h"
 
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+#include <gtsam/base/Vector.h>
+#include <gtsam/geometry/Cal3DS2.h>
+#include <gtsam/geometry/Pose3.h>
+
 #include <algorithm>  // for max
 #include <fstream>
 #include <map>
@@ -23,21 +29,14 @@
 #include <utility>  // for pair<>
 #include <vector>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-#include <gflags/gflags.h>
-
-#include <gtsam/base/Vector.h>
-#include <gtsam/geometry/Cal3DS2.h>
-#include <gtsam/geometry/Pose3.h>
-
 #include "kimera-vio/frontend/StereoFrame.h"
 #include "kimera-vio/imu-frontend/ImuFrontend-definitions.h"
 #include "kimera-vio/logging/Logger.h"
 #include "kimera-vio/utils/YamlParser.h"
 
 DEFINE_string(dataset_path,
-              "/Users/Luca/data/MH_01_easy",
+              "/media/igor/Data/projects/StereoOdometry/other/"
+              "6-DOF-Inertial-Odometry/MH_01_easy",
               "Path of dataset (i.e. Euroc, /Users/Luca/data/MH_01_easy).");
 DEFINE_int64(initial_k,
              0,
@@ -48,7 +47,7 @@ DEFINE_int64(final_k,
              "Final frame to finish processing dataset, "
              "subsequent frames will not be used.");
 DEFINE_bool(log_euroc_gt_data,
-            false,
+            true,
             "Log Euroc ground-truth data to file for later evaluation.");
 
 namespace VIO {
@@ -79,9 +78,9 @@ EurocDataProvider::EurocDataProvider(const std::string& dataset_path,
   // skip last frames.
   CHECK_GT(final_k_, 0);
 
-  CHECK_GT(final_k_, initial_k_) << "Value for final_k (" << final_k_
-                                 << ") is smaller than value for"
-                                 << " initial_k (" << initial_k_ << ").";
+  CHECK_GT(final_k_, initial_k_)
+      << "Value for final_k (" << final_k_ << ") is smaller than value for"
+      << " initial_k (" << initial_k_ << ").";
   current_k_ = initial_k_;
 
   // Parse the actual dataset first, then run it.

@@ -7,12 +7,11 @@
 #include "kimera-vio/frontend/feature-detector/FeatureDetector.h"
 
 #include <algorithm>
+#include <numeric>
 
 #include "kimera-vio/frontend/UndistorterRectifier.h"
 #include "kimera-vio/utils/Timer.h"
 #include "kimera-vio/utils/UtilsOpenCV.h"  // Just for ExtractCorners...
-
-#include <numeric>
 
 namespace VIO {
 
@@ -141,7 +140,9 @@ void FeatureDetector::featureDetection(Frame* cur_frame,
       cur_frame->landmarks_age_.push_back(1u);
       cur_frame->keypoints_.push_back(corner);
       cur_frame->scores_.push_back(0.0);  // NOT IMPLEMENTED
-      cur_frame->versors_.push_back(UndistorterRectifier::UndistortKeypointAndGetVersor(corner, cam_param, R));
+      cur_frame->versors_.push_back(
+          UndistorterRectifier::UndistortKeypointAndGetVersor(
+              corner, cam_param, R));
       ++lmk_id;
     }
     VLOG(10) << "featureExtraction: frame " << cur_frame->id_
@@ -193,8 +194,10 @@ KeypointsCV FeatureDetector::featureDetection(const Frame& cur_frame,
   }
 
   // Actual raw feature detection
+  LOG(INFO) << "rawFeatureDetection start call";
   std::vector<cv::KeyPoint> keypoints =
       rawFeatureDetection(cur_frame.img_, mask);
+  LOG(INFO) << "rawFeatureDetection finish call";
   VLOG(1) << "Number of points detected : " << keypoints.size();
 
   // cv::Mat fastDetectionResults;  // draw FAST detections

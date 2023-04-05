@@ -7,19 +7,19 @@
 
 #include "kimera-vio/frontend/Tracker.h"
 
+#include <gflags/gflags.h>
 #include <time.h>
-#include <algorithm>   // for sort
-#include <functional>  // for less<>
-#include <map>         // for map<>
-#include <memory>      // for shared_ptr<>
+
+#include <algorithm>             // for sort
+#include <boost/shared_ptr.hpp>  // used for opengv
+#include <functional>            // for less<>
+#include <map>                   // for map<>
+#include <memory>                // for shared_ptr<>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <string>
 #include <utility>  // for pair<>
 #include <vector>   // for vector<>
-
-#include <boost/shared_ptr.hpp>  // used for opengv
-
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
 
 #include "kimera-vio/frontend/UndistorterRectifier.h"
 #include "kimera-vio/frontend/optical-flow/OpticalFlowPredictorFactory.h"
@@ -70,7 +70,7 @@ Tracker::Tracker(const FrontendParams& tracker_params,
 
 // TODO(Toni) a pity that this function is not const just because
 // it modifies debuginfo_...
-// NOTE: you do not need R in the mono case. For stereo cameras we pass R 
+// NOTE: you do not need R in the mono case. For stereo cameras we pass R
 // to ensure we rectify the versors and 3D points of the features we detect.
 void Tracker::featureTracking(Frame* ref_frame,
                               Frame* cur_frame,
@@ -163,19 +163,20 @@ void Tracker::featureTracking(Frame* ref_frame,
     cur_frame->scores_.push_back(ref_frame->scores_[idx_valid_lmk]);
     cur_frame->keypoints_.push_back(px_cur[i]);
     cur_frame->versors_.push_back(
-        UndistorterRectifier::UndistortKeypointAndGetVersor(px_cur[i], ref_frame->cam_param_, R));
+        UndistorterRectifier::UndistortKeypointAndGetVersor(
+            px_cur[i], ref_frame->cam_param_, R));
   }
 
   // max number of frames in which a feature is seen
   VLOG(5) << "featureTracking: frame " << cur_frame->id_
-           << ",  Nr tracked keypoints: " << cur_frame->keypoints_.size()
-           << " (max: "
-           << tracker_params_.feature_detector_params_.max_features_per_frame_
-           << ")"
-           << " (max observed age of tracked features: "
-           << *std::max_element(cur_frame->landmarks_age_.begin(),
-                                cur_frame->landmarks_age_.end())
-           << " vs. maxFeatureAge_: " << tracker_params_.maxFeatureAge_ << ")";
+          << ",  Nr tracked keypoints: " << cur_frame->keypoints_.size()
+          << " (max: "
+          << tracker_params_.feature_detector_params_.max_features_per_frame_
+          << ")"
+          << " (max observed age of tracked features: "
+          << *std::max_element(cur_frame->landmarks_age_.begin(),
+                               cur_frame->landmarks_age_.end())
+          << " vs. maxFeatureAge_: " << tracker_params_.maxFeatureAge_ << ")";
   // Display feature tracks together with predicted points.
   if (display_queue_ && FLAGS_visualize_feature_predictions) {
     displayImage(cur_frame->timestamp_,
@@ -231,8 +232,8 @@ std::pair<TrackingStatus, gtsam::Pose3> Tracker::geometricOutlierRejectionMono(
   VLOG(5) << "geometricOutlierRejectionMono: RANSAC complete.";
 
   VLOG(5) << "RANSAC (MONO): #iter = " << mono_ransac_.iterations_ << '\n'
-           << " #inliers = " << mono_ransac_.inliers_.size() << " #outliers = "
-           << mono_ransac_.inliers_.size() - matches_ref_cur.size();
+          << " #inliers = " << mono_ransac_.inliers_.size() << " #outliers = "
+          << mono_ransac_.inliers_.size() - matches_ref_cur.size();
   debug_info_.nrMonoPutatives_ = matches_ref_cur.size();
 
   // Remove outliers. This modifies the frames, that is why this function does
@@ -378,10 +379,12 @@ std::pair<Vector3, Matrix3> Tracker::getPoint3AndCovariance(
     const Matrix3& stereoPtCov,
     boost::optional<gtsam::Matrix3> Rmat) {
   gtsam::StereoPoint2 stereoPoint = gtsam::StereoPoint2(
-      static_cast<double>(stereoFrame.left_keypoints_rectified_[pointId].second.x),
-      static_cast<double>(stereoFrame.right_keypoints_rectified_[pointId].second.x),
       static_cast<double>(
-          stereoFrame.left_keypoints_rectified_[pointId].second.y));  // uL_, uR_, v_;
+          stereoFrame.left_keypoints_rectified_[pointId].second.x),
+      static_cast<double>(
+          stereoFrame.right_keypoints_rectified_[pointId].second.x),
+      static_cast<double>(stereoFrame.left_keypoints_rectified_[pointId]
+                              .second.y));  // uL_, uR_, v_;
 
   Matrix3 Jac_point3_sp2;  // jacobian of the back projection
   Vector3 point3_i_gtsam =
@@ -392,7 +395,7 @@ std::pair<Vector3, Matrix3> Tracker::getPoint3AndCovariance(
   // (1e-1)
   if ((point3_i_gtsam - point3_i).norm() > 1e-1) {
     VLOG(5) << "\n point3_i_gtsam \n " << point3_i_gtsam << "\n point3_i \n"
-             << point3_i;
+            << point3_i;
     LOG(FATAL) << "GetPoint3AndCovariance: inconsistent "
                << "backprojection results (ref): "
                << (point3_i_gtsam - point3_i).norm();
@@ -421,7 +424,7 @@ Tracker::geometricOutlierRejectionStereoGivenRotation(
       ref_stereoFrame, cur_stereoFrame, &matches_ref_cur);
 
   VLOG(5) << "geometricOutlierRejectionStereoGivenRot:"
-              " starting 1-point RANSAC (voting)";
+             " starting 1-point RANSAC (voting)";
 
   // Stereo point covariance: for covariance propagation.
   Matrix3 stereoPtCov = Matrix3::Identity();  // 3 px std in each direction
@@ -532,15 +535,18 @@ Tracker::geometricOutlierRejectionStereoGivenRotation(
                   O(1, 0) * (O(0, 1) * O(2, 2) - O(0, 2) * O(2, 1)) +
                   O(2, 0) * (O(0, 1) * O(1, 2) - O(1, 1) * O(0, 2)));
       innovationMahalanobisNorm =
-          dinv * v(0) * (v(0) * (O(1, 1) * O(2, 2) - O(1, 2) * O(2, 1)) -
-                         v(1) * (O(0, 1) * O(2, 2) - O(0, 2) * O(2, 1)) +
-                         v(2) * (O(0, 1) * O(1, 2) - O(1, 1) * O(0, 2))) +
-          dinv * v(1) * (O(0, 0) * (v(1) * O(2, 2) - O(1, 2) * v(2)) -
-                         O(1, 0) * (v(0) * O(2, 2) - O(0, 2) * v(2)) +
-                         O(2, 0) * (v(0) * O(1, 2) - v(1) * O(0, 2))) +
-          dinv * v(2) * (O(0, 0) * (O(1, 1) * v(2) - v(1) * O(2, 1)) -
-                         O(1, 0) * (O(0, 1) * v(2) - v(0) * O(2, 1)) +
-                         O(2, 0) * (O(0, 1) * v(1) - O(1, 1) * v(0)));
+          dinv * v(0) *
+              (v(0) * (O(1, 1) * O(2, 2) - O(1, 2) * O(2, 1)) -
+               v(1) * (O(0, 1) * O(2, 2) - O(0, 2) * O(2, 1)) +
+               v(2) * (O(0, 1) * O(1, 2) - O(1, 1) * O(0, 2))) +
+          dinv * v(1) *
+              (O(0, 0) * (v(1) * O(2, 2) - O(1, 2) * v(2)) -
+               O(1, 0) * (v(0) * O(2, 2) - O(0, 2) * v(2)) +
+               O(2, 0) * (v(0) * O(1, 2) - v(1) * O(0, 2))) +
+          dinv * v(2) *
+              (O(0, 0) * (O(1, 1) * v(2) - v(1) * O(2, 1)) -
+               O(1, 0) * (O(0, 1) * v(2) - v(0) * O(2, 1)) +
+               O(2, 0) * (O(0, 1) * v(1) - O(1, 1) * v(0)));
       // timeMahalanobis += UtilsOpenCV::GetTimeInSeconds() - timeBefore;
 
       // timeBefore = UtilsOpenCV::GetTimeInSeconds();
@@ -586,9 +592,9 @@ Tracker::geometricOutlierRejectionStereoGivenRotation(
   // std::cout << "maxCoherentSetId: " << maxCoherentSetId << std::endl;
 
   VLOG(5) << "RANSAC (STEREO): #iter = " << 1 << '\n'
-           << " #inliers = " << inliers.size()
-           << "\n #outliers = " << inliers.size() - matches_ref_cur.size()
-           << "\n Total = " << matches_ref_cur.size();
+          << " #inliers = " << inliers.size()
+          << "\n #outliers = " << inliers.size() - matches_ref_cur.size()
+          << "\n Total = " << matches_ref_cur.size();
   debug_info_.nrStereoPutatives_ = matches_ref_cur.size();
 
   // Remove outliers.
@@ -618,10 +624,10 @@ Tracker::geometricOutlierRejectionStereoGivenRotation(
     double time_translation_computation_p =
         utils::Timer::toc(start_time_tic).count();
     VLOG(5) << " Time MatchingAndAllocation: " << timeMatchingAndAllocation_p
-             << " Time CreatePointsAndCov: " << timeCreatePointsAndCov_p
-             << " Time Voting: " << time_voting_p
-             << " Time translation computation p: "
-             << time_translation_computation_p;
+            << " Time CreatePointsAndCov: " << timeCreatePointsAndCov_p
+            << " Time Voting: " << time_voting_p
+            << " Time translation computation p: "
+            << time_translation_computation_p;
   }
   debug_info_.stereoRansacTime_ = utils::Timer::toc(start_time_tic).count();
   debug_info_.nrStereoInliers_ = inliers.size();
@@ -645,7 +651,7 @@ Tracker::geometricOutlierRejectionStereo(StereoFrame& ref_stereoFrame,
       ref_stereoFrame, cur_stereoFrame, &matches_ref_cur);
 
   VLOG(5) << "geometricOutlierRejectionStereo:"
-              " starting 3-point RANSAC (voting)";
+             " starting 3-point RANSAC (voting)";
 
   // NOTE: 3d points are constructed by versors, which are already in the
   // rectified left camera frame. No further rectification needed.
@@ -682,9 +688,9 @@ Tracker::geometricOutlierRejectionStereo(StereoFrame& ref_stereoFrame,
   VLOG(5) << "geometricOutlierRejectionStereo: voting complete.";
 
   VLOG(5) << "RANSAC (STEREO): #iter = " << stereo_ransac_.iterations_ << '\n'
-           << " #inliers = " << stereo_ransac_.inliers_.size()
-           << "\n #outliers = "
-           << stereo_ransac_.inliers_.size() - matches_ref_cur.size();
+          << " #inliers = " << stereo_ransac_.inliers_.size()
+          << "\n #outliers = "
+          << stereo_ransac_.inliers_.size() - matches_ref_cur.size();
   debug_info_.nrStereoPutatives_ = matches_ref_cur.size();
 
   // Remove outliers.
@@ -723,10 +729,9 @@ void Tracker::findOutliers(const KeypointMatches& matches_ref_cur,
   // The following is a complicated way of computing a set difference
   size_t k = 0;
   for (size_t i = 0u; i < matches_ref_cur.size(); ++i) {
-    if (k < inliers.size()  // If we haven't exhaused inliers
-        &&
-        static_cast<int>(i) > inliers[k])  // If we are after the inlier[k]
-      ++k;                                 // Check the next inlier
+    if (k < inliers.size()                    // If we haven't exhaused inliers
+        && static_cast<int>(i) > inliers[k])  // If we are after the inlier[k]
+      ++k;                                    // Check the next inlier
     if (k >= inliers.size() ||
         static_cast<int>(i) != inliers[k])  // If i is not an inlier
       outliers->push_back(i);

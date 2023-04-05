@@ -107,10 +107,9 @@ std::string Pipeline::printStatus() const {
      << "Backend initialized? " << vio_backend_module_->isInitialized() << '\n'
      << "Data provider is working? " << data_provider_module_->isWorking()
      << '\n'
-     << "Frontend input queue shutdown? "
-     << frontend_input_queue_.isShutdown() << '\n'
-     << "Frontend input queue empty? " << frontend_input_queue_.empty()
+     << "Frontend input queue shutdown? " << frontend_input_queue_.isShutdown()
      << '\n'
+     << "Frontend input queue empty? " << frontend_input_queue_.empty() << '\n'
      << "Frontend is working? " << vio_frontend_module_->isWorking() << '\n'
      << "Backend Input queue shutdown? " << backend_input_queue_.isShutdown()
      << '\n'
@@ -182,6 +181,7 @@ void Pipeline::spinSequential() {
   vio_frontend_module_->spin();
 
   CHECK(vio_backend_module_);
+  LOG(INFO) << "vio_backend_module_->spin()";
   vio_backend_module_->spin();
 
   if (mesher_module_) mesher_module_->spin();
@@ -273,8 +273,10 @@ void Pipeline::spinOnce(FrontendInputPacketBase::UniquePtr input) {
 
 void Pipeline::launchThreads() {
   if (parallel_run_) {
+    LOG(INFO) << "Pipeline::launchThreads";
     frontend_thread_ = VIO::make_unique<std::thread>(
-        &VisionImuFrontendModule::spin, CHECK_NOTNULL(vio_frontend_module_.get()));
+        &VisionImuFrontendModule::spin,
+        CHECK_NOTNULL(vio_frontend_module_.get()));
 
     backend_thread_ = VIO::make_unique<std::thread>(
         &VioBackendModule::spin, CHECK_NOTNULL(vio_backend_module_.get()));
@@ -338,8 +340,7 @@ void Pipeline::joinThreads() {
   VLOG(1) << "All threads joined.";
 }
 
-void Pipeline::joinThread(const std::string& thread_name,
-                          std::thread* thread) {
+void Pipeline::joinThread(const std::string& thread_name, std::thread* thread) {
   if (thread) {
     VLOG(1) << "Joining " << thread_name.c_str() << " thread...";
     if (thread->joinable()) {

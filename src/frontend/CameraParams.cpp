@@ -14,10 +14,10 @@
 
 #include "kimera-vio/frontend/CameraParams.h"
 
+#include <gtsam/navigation/ImuBias.h>
+
 #include <fstream>
 #include <iostream>
-
-#include <gtsam/navigation/ImuBias.h>
 
 namespace VIO {
 
@@ -55,11 +55,13 @@ void CameraParams::parseDistortion(const YamlParser& yaml_parser) {
   yaml_parser.getYamlParam("distortion_model", &distortion_model);
   yaml_parser.getYamlParam("camera_model", &camera_model_);
   distortion_model_ = stringToDistortion(distortion_model, camera_model_);
-  CHECK(distortion_model_ == DistortionModel::RADTAN ||
-        distortion_model_ == DistortionModel::EQUIDISTANT)
-      << "Unsupported distortion model. Expected: radtan or equidistant.";
-  yaml_parser.getYamlParam("distortion_coefficients", &distortion_coeff_);
-  convertDistortionVectorToMatrix(distortion_coeff_, &distortion_coeff_mat_);
+  if (distortion_model_ != DistortionModel::NONE) {
+    CHECK(distortion_model_ == DistortionModel::RADTAN ||
+          distortion_model_ == DistortionModel::EQUIDISTANT)
+        << "Unsupported distortion model. Expected: radtan or equidistant.";
+    yaml_parser.getYamlParam("distortion_coefficients", &distortion_coeff_);
+    convertDistortionVectorToMatrix(distortion_coeff_, &distortion_coeff_mat_);
+  }
 }
 
 const DistortionModel CameraParams::stringToDistortion(
@@ -78,7 +80,7 @@ const DistortionModel CameraParams::stringToDistortion(
                  ::tolower);
 
   if (lower_case_camera_model == "pinhole") {
-    if (lower_case_camera_model == std::string("none")) {
+    if (lower_case_distortion_model == std::string("none")) {
       return DistortionModel::NONE;
     } else if ((lower_case_distortion_model == std::string("plumb_bob")) ||
                (lower_case_distortion_model ==
