@@ -19,6 +19,7 @@
 #include "kimera-vio/backend/VioBackendParams.h"
 #include "kimera-vio/frontend/Camera.h"
 #include "kimera-vio/frontend/CameraParams.h"
+#include "kimera-vio/frontend/GnssParams.h"
 #include "kimera-vio/frontend/VisionImuFrontend-definitions.h"
 #include "kimera-vio/frontend/VisionImuFrontendParams.h"
 #include "kimera-vio/imu-frontend/ImuFrontendParams.h"
@@ -89,7 +90,8 @@ struct VioParams : public PipelineParams {
             const std::string& frontend_params_filename,
             const std::string& backend_params_filename,
             const std::string& lcd_params_filename,
-            const std::string& display_params_filename);
+            const std::string& display_params_filename,
+            const std::string& gnss_params_filename);
   virtual ~VioParams() = default;
 
   /**
@@ -129,6 +131,8 @@ struct VioParams : public PipelineParams {
   DisplayType display_type_;
   bool parallel_run_;
 
+  GnssParams gnss_params_;
+
  protected:
   //! Helper function to parse camera params.
   CameraParams parseCameraParams(const std::string& filename) const;
@@ -136,17 +140,17 @@ struct VioParams : public PipelineParams {
   bool equals(const PipelineParams& obj) const override {
     const auto& rhs = static_cast<const VioParams&>(obj);
     return imu_params_ == rhs.imu_params_ &&
-        camera_params_ == rhs.camera_params_ &&
-        frontend_params_ == rhs.frontend_params_ &&
-        backend_params_ == rhs.backend_params_ &&
-        frontend_type_ == rhs.frontend_type_ &&
-        backend_type_ == rhs.backend_type_ &&
-        display_type_ == rhs.display_type_ &&
-        lcd_params_ == rhs.lcd_params_ &&
-        display_params_ == rhs.display_params_ &&
-        parallel_run_ == rhs.parallel_run_;
+           camera_params_ == rhs.camera_params_ &&
+           frontend_params_ == rhs.frontend_params_ &&
+           backend_params_ == rhs.backend_params_ &&
+           frontend_type_ == rhs.frontend_type_ &&
+           backend_type_ == rhs.backend_type_ &&
+           display_type_ == rhs.display_type_ &&
+           lcd_params_ == rhs.lcd_params_ &&
+           display_params_ == rhs.display_params_ &&
+           parallel_run_ == rhs.parallel_run_ &&
+           gnss_params_ == rhs.gnss_params_;
   }
-
 
   //! Names of the YAML files with the parameters.
   std::string pipeline_params_filename_;
@@ -157,6 +161,7 @@ struct VioParams : public PipelineParams {
   std::string backend_params_filename_;
   std::string lcd_params_filename_;
   std::string display_params_filename_;
+  std::string gnss_params_filename_;
 };
 
 //! Callback called when the VIO pipeline has shut down.

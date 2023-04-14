@@ -56,15 +56,20 @@ StereoDataProviderModule::getInputPacket() {
   CHECK(right_frame_payload);
 
   if (!shutdown_) {
-    CHECK(vio_pipeline_callback_);
-    vio_pipeline_callback_(VIO::make_unique<StereoImuSyncPacket>(
+    auto packet = VIO::make_unique<StereoImuSyncPacket>(
         StereoFrame(left_frame_id,
                     timestamp,
                     *mono_imu_sync_packet->frame_,  // this copies...
                     *right_frame_payload),          // this copies...
         // be given in PipelineParams.
         mono_imu_sync_packet->imu_stamps_,
-        mono_imu_sync_packet->imu_accgyrs_));
+        mono_imu_sync_packet->imu_accgyrs_);
+    if (send_packet_) {
+      CHECK(vio_pipeline_callback_);
+      vio_pipeline_callback_(std::move(packet));
+    } else {
+      return packet;
+    }
   }
 
   // Push the synced messages to the Frontend's input queue

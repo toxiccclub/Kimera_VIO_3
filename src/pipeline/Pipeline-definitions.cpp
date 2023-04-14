@@ -14,6 +14,8 @@
 
 #include "kimera-vio/pipeline/Pipeline-definitions.h"
 
+#include <glog/logging.h>
+
 #include "kimera-vio/backend/RegularVioBackendParams.h"
 #include "kimera-vio/backend/VioBackend-definitions.h"
 #include "kimera-vio/backend/VioBackendParams.h"
@@ -24,9 +26,7 @@
 #include "kimera-vio/imu-frontend/ImuFrontendParams.h"
 #include "kimera-vio/loopclosure/LoopClosureDetectorParams.h"
 #include "kimera-vio/visualizer/DisplayParams.h"
-#include "kimera-vio/visualizer/OpenCvDisplay.h" // for ocv display params...
-
-#include <glog/logging.h>
+#include "kimera-vio/visualizer/OpenCvDisplay.h"  // for ocv display params...
 
 namespace VIO {
 
@@ -39,7 +39,8 @@ VioParams::VioParams(const std::string& params_folder_path)
                 "FrontendParams.yaml",
                 "BackendParams.yaml",
                 "LcdParams.yaml",
-                "DisplayParams.yaml") {}
+                "DisplayParams.yaml",
+                "GnssParams.yaml") {}
 
 VioParams::VioParams(const std::string& params_folder_path,
                      const std::string& pipeline_params_filename,
@@ -49,7 +50,8 @@ VioParams::VioParams(const std::string& params_folder_path,
                      const std::string& frontend_params_filename,
                      const std::string& backend_params_filename,
                      const std::string& lcd_params_filename,
-                     const std::string& display_params_filename)
+                     const std::string& display_params_filename,
+                     const std::string& gnss_params_filename)
     : PipelineParams("VioParams"),
       // Actual VIO Parameters
       imu_params_(),
@@ -57,6 +59,7 @@ VioParams::VioParams(const std::string& params_folder_path,
       frontend_params_(),
       backend_params_(std::make_shared<BackendParams>()),
       lcd_params_(),
+      gnss_params_(),
       display_params_(std::make_shared<DisplayParams>(DisplayType::kOpenCV)),
       frontend_type_(FrontendType::kStereoImu),
       backend_type_(BackendType::kStructuralRegularities),
@@ -69,7 +72,8 @@ VioParams::VioParams(const std::string& params_folder_path,
       frontend_params_filename_(frontend_params_filename),
       backend_params_filename_(backend_params_filename),
       lcd_params_filename_(lcd_params_filename),
-      display_params_filename_(display_params_filename) {
+      display_params_filename_(display_params_filename),
+      gnss_params_filename_(gnss_params_filename) {
   if (!params_folder_path.empty()) {
     parseYAML(params_folder_path);
   } else {
@@ -95,6 +99,9 @@ bool VioParams::parseYAML(const std::string& folder_path) {
 
   // Parse IMU params
   parsePipelineParams(folder_path + '/' + imu_params_filename_, &imu_params_);
+
+  // Parse IMU params
+  parsePipelineParams(folder_path + '/' + gnss_params_filename_, &gnss_params_);
 
   // Parse Camera parameters
   camera_params_.push_back(
@@ -157,6 +164,7 @@ bool VioParams::parseYAML(const std::string& folder_path) {
 void VioParams::print() const {
   LOG(INFO) << std::string(10, '*') << " VIO PARAMS " << std::string(10, '*');
   imu_params_.print();
+  gnss_params_.print();
   for (const auto& cam : camera_params_) cam.print();
   frontend_params_.print();
   CHECK(backend_params_);

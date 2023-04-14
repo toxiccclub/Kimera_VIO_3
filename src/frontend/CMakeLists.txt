@@ -16,6 +16,11 @@ target_sources(kimera_vio
   "${CMAKE_CURRENT_LIST_DIR}/VisionImuFrontendModule.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/VisionImuFrontendParams.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/Tracker.cpp"
+### GNSS
+  #"${CMAKE_CURRENT_LIST_DIR}/GnssVisionImuFrontendModule.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/GnssStereoVisionImuFrontend.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/GnssStereoImuSyncPacket.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/GnssParams.cpp"
 )
 
 add_subdirectory(feature-detector)

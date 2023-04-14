@@ -10,6 +10,7 @@
  * @file   VisionImuFrontend-definitions.h
  * @brief  Definitions for VisionImuFrontend
  * @author Marcus Abate
+ * @author Igor Lovets
  */
 
 #pragma once
@@ -22,7 +23,9 @@ enum class FrontendType {
   //! Frontend that works with Stereo camera and Imu
   kStereoImu = 1,
   //! Frontend that works with RGB + Depth camera and Imu
-  kRgbdImu = 2
+  kRgbdImu = 2,
+  //! Frontend that works with Gnss, Stereo camera and Imu
+  kGnssStereoImu = 3,
 };
 
 }  // namespace VIO

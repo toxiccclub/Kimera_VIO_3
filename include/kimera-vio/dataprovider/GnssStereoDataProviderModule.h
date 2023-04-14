@@ -24,7 +24,8 @@
 #include <string>
 #include <utility>  // for move
 
-#include "kimera-vio/dataprovider/MonoDataProviderModule.h"
+#include "kimera-vio/dataprovider/StereoDataProviderModule.h"
+#include "kimera-vio/frontend/Gnss.h"
 #include "kimera-vio/frontend/StereoImuSyncPacket.h"
 #include "kimera-vio/frontend/StereoMatchingParams.h"
 #include "kimera-vio/pipeline/Pipeline-definitions.h"
@@ -33,18 +34,19 @@
 
 namespace VIO {
 
-class StereoDataProviderModule : public MonoDataProviderModule {
+class GnssStereoDataProviderModule : public StereoDataProviderModule {
  public:
-  KIMERA_DELETE_COPY_CONSTRUCTORS(StereoDataProviderModule);
-  KIMERA_POINTER_TYPEDEFS(StereoDataProviderModule);
+  KIMERA_DELETE_COPY_CONSTRUCTORS(GnssStereoDataProviderModule);
+  KIMERA_POINTER_TYPEDEFS(GnssStereoDataProviderModule);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  StereoDataProviderModule(OutputQueue* output_queue,
-                           const std::string& name_id,
-                           const bool& parallel_run,
-                           const StereoMatchingParams& stereo_matching_params);
+  GnssStereoDataProviderModule(
+      OutputQueue* output_queue,
+      const std::string& name_id,
+      const bool& parallel_run,
+      const StereoMatchingParams& stereo_matching_params);
 
-  ~StereoDataProviderModule() override = default;
+  ~GnssStereoDataProviderModule() override = default;
 
   inline OutputUniquePtr spinOnce(InputUniquePtr input) override {
     // Called by spin(), which also calls getInputPacket().
@@ -54,34 +56,21 @@ class StereoDataProviderModule : public MonoDataProviderModule {
   }
 
   //! Callbacks to fill queues: they should be all lighting fast.
-  inline void fillRightFrameQueue(Frame::UniquePtr right_frame) {
-    CHECK(right_frame);
-    right_frame_queue_.push(std::move(right_frame));
-  }
-  inline void fillRightFrameQueueBlockingIfFull(Frame::UniquePtr right_frame) {
-    CHECK(right_frame);
-    right_frame_queue_.pushBlockingIfFull(std::move(right_frame), 5u);
+  inline void fillGnssQueue(Gnss::UniquePtr gnss_data) {
+    CHECK(gnss_data);
+    gnss_queue_.push(std::move(gnss_data));
   }
 
  protected:
   //! The data synchronization function
   InputUniquePtr getInputPacket() override;
 
-  std::atomic_bool send_packet_ = {true};
-
   //! Called when general shutdown of PipelineModule is triggered.
   void shutdownQueues() override;
 
-  //! Checks if the module has work to do (should check input queues are empty)
-  inline bool hasWork() const override {
-    return MonoDataProviderModule::hasWork() || !right_frame_queue_.empty();
-  }
-
  private:
   //! Input data
-  ThreadsafeQueue<Frame::UniquePtr> right_frame_queue_;
-  // TODO(Toni): remove these below
-  StereoMatchingParams stereo_matching_params_;
+  ThreadsafeQueue<Gnss::UniquePtr> gnss_queue_;
 };
 
 }  // namespace VIO

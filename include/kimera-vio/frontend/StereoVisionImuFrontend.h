@@ -14,29 +14,26 @@
 
 #pragma once
 
-#include <memory>
-#include <atomic>
-
-#include <boost/shared_ptr.hpp>  // used for opengv
-
 #include <opencv2/highgui/highgui_c.h>
+
+#include <atomic>
+#include <boost/shared_ptr.hpp>  // used for opengv
+#include <memory>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/opencv.hpp>
-
-#include "kimera-vio/frontend/VisionImuFrontend.h"
 
 #include "kimera-vio/backend/VioBackend-definitions.h"
 #include "kimera-vio/frontend/StereoFrame.h"
 #include "kimera-vio/frontend/StereoImuSyncPacket.h"
 #include "kimera-vio/frontend/StereoMatcher.h"
 #include "kimera-vio/frontend/StereoVisionImuFrontend-definitions.h"
+#include "kimera-vio/frontend/VisionImuFrontend.h"
+#include "kimera-vio/pipeline/PipelineModule.h"
 #include "kimera-vio/utils/Statistics.h"
 #include "kimera-vio/utils/ThreadsafeQueue.h"
 #include "kimera-vio/utils/Timer.h"
-
-#include "kimera-vio/pipeline/PipelineModule.h"
 
 namespace VIO {
 
@@ -50,11 +47,11 @@ class StereoVisionImuFrontend : public VisionImuFrontend {
 
  public:
   StereoVisionImuFrontend(const ImuParams& imu_params,
-                       const ImuBias& imu_initial_bias,
-                       const FrontendParams& tracker_params,
-                       const StereoCamera::ConstPtr& stereo_camera,
-                       DisplayQueue* display_queue = nullptr,
-                       bool log_output = false);
+                          const ImuBias& imu_initial_bias,
+                          const FrontendParams& tracker_params,
+                          const StereoCamera::ConstPtr& stereo_camera,
+                          DisplayQueue* display_queue = nullptr,
+                          bool log_output = false);
   virtual ~StereoVisionImuFrontend();
 
  public:
@@ -80,6 +77,7 @@ class StereoVisionImuFrontend : public VisionImuFrontend {
   // Frontend initialization.
   void processFirstStereoFrame(const StereoFrame& firstFrame);
 
+ public:
   /**
    * @brief bootstrapSpin SpinOnce used when initializing the Frontend.
    * @param input
@@ -109,6 +107,7 @@ class StereoVisionImuFrontend : public VisionImuFrontend {
             std::move(input)));
   }
 
+ private:
   /* ------------------------------------------------------------------------ */
   // Used when initializing the Frontend, operates on Stereo Frontend-specific
   // structures.

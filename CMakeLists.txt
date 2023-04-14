@@ -183,6 +183,9 @@ add_library(kimera_vio::kimera_vio ALIAS kimera_vio)
 add_executable(stereoVIOEuroc ./examples/KimeraVIO.cpp)
 target_link_libraries(stereoVIOEuroc PUBLIC kimera_vio::kimera_vio)
 
+add_executable(GnssStereoVIO ./odometer/GnssStereoVIO.cpp)
+target_link_libraries(GnssStereoVIO PUBLIC kimera_vio::kimera_vio)
+
 ############################### TESTS ##########################################
 ### Add testing
 option(KIMERA_BUILD_TESTS "Build tests" ON)

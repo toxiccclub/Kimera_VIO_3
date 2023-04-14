@@ -7,10 +7,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * @file   KimeraVIO.cpp
- * @brief  Example of VIO pipeline.
- * @author Antoni Rosinol
- * @author Luca Carlone
+ * @file   GnssVIO.cpp
  */
 
 #include <gflags/gflags.h>
@@ -20,20 +17,20 @@
 #include <memory>
 #include <utility>
 
-#include "kimera-vio/dataprovider/EurocDataProvider.h"
-#include "kimera-vio/dataprovider/KittiDataProvider.h"
+#include "kimera-vio/dataprovider/GNSSVIODataProvider.h"
+//#include "kimera-vio/dataprovider/KittiDataProvider.h"
 #include "kimera-vio/frontend/StereoImuSyncPacket.h"
 #include "kimera-vio/logging/Logger.h"
-#include "kimera-vio/pipeline/MonoImuPipeline.h"
+//#include "kimera-vio/pipeline/MonoImuPipeline.h"
+#include "kimera-vio/pipeline/GnssStereoImuPipeline.h"
 #include "kimera-vio/pipeline/Pipeline.h"
-#include "kimera-vio/pipeline/StereoImuPipeline.h"
 #include "kimera-vio/utils/Statistics.h"
 #include "kimera-vio/utils/Timer.h"
 
 DEFINE_int32(dataset_type,
-             0,
+             2,
              "Type of parser to use:\n "
-             "0: Euroc \n 1: Kitti (not supported).");
+             "0: Euroc \n 1: Kitti (not supported) \n 2: GnssVIO.");
 DEFINE_string(
     params_folder_path,
     "../params/Euroc",
@@ -67,8 +64,8 @@ int main(int argc, char* argv[]) {
         }
       }
     } break;
-    case 1: {
-      dataset_parser = VIO::make_unique<VIO::KittiDataProvider>();
+    case 2: {
+      dataset_parser = VIO::make_unique<VIO::GNSSVIODataProvider>(vio_params);
     } break;
     default: {
       LOG(FATAL) << "Unrecognized dataset type: " << FLAGS_dataset_type << "."
@@ -79,19 +76,7 @@ int main(int argc, char* argv[]) {
 
   VIO::Pipeline::Ptr vio_pipeline;
 
-  switch (vio_params.frontend_type_) {
-    case VIO::FrontendType::kMonoImu: {
-      vio_pipeline = VIO::make_unique<VIO::MonoImuPipeline>(vio_params);
-    } break;
-    case VIO::FrontendType::kStereoImu: {
-      vio_pipeline = VIO::make_unique<VIO::StereoImuPipeline>(vio_params);
-    } break;
-    default: {
-      LOG(FATAL) << "Unrecognized Frontend type: "
-                 << VIO::to_underlying(vio_params.frontend_type_)
-                 << ". 0: Mono, 1: Stereo.";
-    } break;
-  }
+  vio_pipeline = VIO::make_unique<VIO::GnssStereoImuPipeline>(vio_params);
 
   // Register callback to shutdown data provider in case VIO pipeline
   // shutsdown.
