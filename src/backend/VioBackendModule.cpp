@@ -15,6 +15,9 @@
 
 #include "kimera-vio/backend/VioBackendModule.h"
 
+#include "kimera-vio/backend/GnssVioBackend-definitions.h"
+#include "kimera-vio/backend/GnssVioBackend.h"
+
 namespace VIO {
 
 VioBackendModule::VioBackendModule(InputQueue* input_queue,
@@ -30,7 +33,25 @@ VioBackendModule::OutputUniquePtr VioBackendModule::spinOnce(
   CHECK(input);
   CHECK(vio_backend_);
   LOG(INFO) << "VioBackendModule::spinOnce";
-  OutputUniquePtr output = vio_backend_->spinOnce(*input);
+  OutputUniquePtr output;
+  output = vio_backend_->spinOnce(*input);
+  //  switch (vio_backend_->getBackendType()) {
+  //    case BackendType::kStereoImu:
+  //    case BackendType::kStructuralRegularities:
+  //      output = vio_backend_->spinOnce(*input);
+  //      break;
+  //    case BackendType::kGnssStereoImu: {
+  //      //      GnssBackendInput::UniquePtr gnss_input =
+  //      //          VIO::safeCast<BackendInput,
+  //      //          GnssBackendInput>(std::move(input));
+  //      GnssVioBackend::UniquePtr gnss_vo_backend =
+  //          VIO::safeCast<VioBackend,
+  //          GnssVioBackend>(std::move(vio_backend_));
+  //      CHECK(gnss_vo_backend);
+  //      output = gnss_vo_backend->spinOnce(*input);
+  //      vio_backend_ = std::move(gnss_vo_backend);
+  //    } break;
+  //  }
   if (!output) {
     LOG(ERROR) << "Backend did not return an output: shutting down Backend.";
     shutdown();

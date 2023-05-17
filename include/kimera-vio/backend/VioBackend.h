@@ -25,13 +25,6 @@
 
 #pragma once
 
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <unordered_map>
-
-#include <boost/foreach.hpp>
-
 #include <gtsam/geometry/Cal3DS2.h>
 #include <gtsam/geometry/Cal3_S2.h>
 #include <gtsam/geometry/StereoCamera.h>
@@ -46,6 +39,12 @@
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam_unstable/nonlinear/BatchFixedLagSmoother.h>
 #include <gtsam_unstable/slam/SmartStereoProjectionPoseFactor.h>
+
+#include <boost/foreach.hpp>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <unordered_map>
 
 #include "kimera-vio/backend/VioBackend-definitions.h"
 #include "kimera-vio/backend/VioBackendParams.h"
@@ -79,7 +78,8 @@ class VioBackend {
    * @param backend_params Parameters for Backend.
    * @param log_output Whether to log to CSV files the Backend output.
    */
-  VioBackend(const Pose3& B_Pose_leftCam,
+  VioBackend(const BackendType& bk_type,
+             const Pose3& B_Pose_leftCam,
              const StereoCalibPtr& stereo_calibration,
              const BackendParams& backend_params,
              const ImuParams& imu_params,
@@ -88,7 +88,7 @@ class VioBackend {
   virtual ~VioBackend() { LOG(INFO) << "Backend destructor called."; }
 
  public:
-  BackendOutput::UniquePtr spinOnce(const BackendInput& input);
+  virtual BackendOutput::UniquePtr spinOnce(const BackendInput& input);
 
   /**
    * @brief isInitialized Returns whether the Frontend is initializing.
@@ -127,18 +127,27 @@ class VioBackend {
   bool initStateAndSetPriors(
       const VioNavStateTimestamped& vio_nav_state_initial_seed);
 
+  // Add initial prior factors.
+  virtual void addInitialPriorFactors(const FrameId& frame_id);
+
+  virtual bool addVisualInertialStateAndOptimize(const BackendInput& input);
+
   void initializeBackend(const BackendInput& input) {
     CHECK(backend_state_ == BackendState::Bootstrap);
     switch (backend_params_.autoInitialize_) {
       case 0: {
+        LOG(INFO) << "initializeFromGt";
         initializeFromGt(input);
         break;
       }
       case 1: {
+        LOG(INFO) << "initializeFromIMU";
         initializeFromIMU(input);
         break;
       }
-      default: { LOG(FATAL) << "Wrong initialization mode."; }
+      default: {
+        LOG(FATAL) << "Wrong initialization mode.";
+      }
     }
     // Signal that the Backend has been initialized.
     backend_state_ = BackendState::Nominal;
@@ -179,7 +188,7 @@ class VioBackend {
   }
 
   inline void saveGraph(const std::string& filepath) const {
-    OfstreamWrapper ofstream_wrapper (filepath);
+    OfstreamWrapper ofstream_wrapper(filepath);
     smoother_->getFactors().saveGraph(ofstream_wrapper.ofstream_);
   }
 
@@ -201,6 +210,16 @@ class VioBackend {
   // [in] timestamp_kf_nsec, keyframe timestamp.
   // [in] status_smart_stereo_measurements_kf, vision data.
   // [in] stereo_ransac_body_pose, inertial data.
+
+  virtual void addVisualInertialState(
+      const Timestamp& timestamp_kf_nsec,
+      const StatusStereoMeasurements& status_smart_stereo_measurements_kf,
+      const gtsam::PreintegrationType& pim,
+      gtsam::FactorIndices& extra_factor_slots_to_delete,
+      boost::optional<gtsam::Pose3> stereo_ransac_body_pose = boost::none);
+
+  virtual void postOptimize(bool smoother);
+
   virtual bool addVisualInertialStateAndOptimize(
       const Timestamp& timestamp_kf_nsec,
       const StatusStereoMeasurements& status_smart_stereo_measurements_kf,
@@ -257,10 +276,7 @@ class VioBackend {
   bool deleteLmkFromFeatureTracks(const LandmarkId& lmk_id);
 
  private:
-  bool addVisualInertialStateAndOptimize(const BackendInput& input);
-
-  // Add initial prior factors.
-  void addInitialPriorFactors(const FrameId& frame_id);
+  //  bool addVisualInertialStateAndOptimize(const BackendInput& input);
 
   void addConstantVelocityFactor(const FrameId& from_id, const FrameId& to_id);
 
@@ -425,6 +441,7 @@ class VioBackend {
   inline gtsam::Values getState() const { return state_; }
   inline int getLandmarkCount() const { return landmark_count_; }
   inline DebugVioInfo getCurrentDebugVioInfo() const { return debug_info_; }
+  inline BackendType getBackendType() { return backend_type_; }
 
  protected:
   // Raw, user-specified params.
@@ -492,6 +509,8 @@ class VioBackend {
 
   // To print smoother info, useful when looking for optimization bugs.
   bool debug_smoother_ = false;
+
+  BackendType backend_type_;
 
  private:
   //! No motion factors settings.

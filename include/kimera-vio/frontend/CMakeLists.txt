@@ -31,6 +31,7 @@ target_sources(kimera_vio PRIVATE
   "${CMAKE_CURRENT_LIST_DIR}/GnssStereoImuSyncPacket.h"
   "${CMAKE_CURRENT_LIST_DIR}/GnssParams.h"
   "${CMAKE_CURRENT_LIST_DIR}/GnssStereoVisionImuFrontend-definitions.h"
+  "${CMAKE_CURRENT_LIST_DIR}/Gnss-definitions.h"
 )
 
 add_subdirectory(feature-detector)

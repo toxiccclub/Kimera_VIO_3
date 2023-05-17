@@ -111,6 +111,7 @@ bool VioParams::parseYAML(const std::string& folder_path) {
 
   // Parse Backend params, needs a bit of help with backend_type
   switch (backend_type_) {
+    case BackendType::kGnssStereoImu:
     case BackendType::kStereoImu: {
       backend_params_ = std::make_shared<BackendParams>();
       break;

@@ -32,6 +32,7 @@ StereoDataProviderModule::StereoDataProviderModule(
 
 StereoDataProviderModule::InputUniquePtr
 StereoDataProviderModule::getInputPacket() {
+  LOG(INFO) << "StereoDataProviderModule::getInputPacket()";
   //! Get left image + IMU data
   MonoImuSyncPacket::UniquePtr mono_imu_sync_packet = getMonoImuSyncPacket();
   if (!mono_imu_sync_packet) {

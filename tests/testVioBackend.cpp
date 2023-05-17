@@ -13,20 +13,18 @@
  * @author Luca Carlone
  */
 
-#include <algorithm>
-#include <cstdlib>
-#include <iostream>
-#include <random>
-
-#include <boost/smart_ptr/make_shared.hpp>
-
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-
 #include <gtsam/base/Vector.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/navigation/ImuBias.h>
+
+#include <algorithm>
+#include <boost/smart_ptr/make_shared.hpp>
+#include <cstdlib>
+#include <iostream>
+#include <random>
 
 #include "kimera-vio/backend/VioBackend.h"
 #include "kimera-vio/backend/VioBackendFactory.h"
@@ -234,7 +232,8 @@ TEST_F(BackendFixture, robotMovingWithConstantVelocity) {
       VioNavState(poses[0].first, velocity_x_, imu_bias_);
   gtsam::Pose3 B_pose_camLrect;
   std::shared_ptr<VioBackend> vio_backend =
-      std::make_shared<VioBackend>(B_pose_camLrect,
+      std::make_shared<VioBackend>(BackendType::kStereoImu,
+                                   B_pose_camLrect,
                                    stereo_calibration,
                                    backend_params_,
                                    imu_params_,
@@ -313,9 +312,11 @@ TEST_F(BackendFixture, robotMovingWithConstantVelocity) {
         boost::shared_ptr<SmartStereoFactor> gsf =
             boost::dynamic_pointer_cast<SmartStereoFactor>(f);
         if (gsf) {
-          EXPECT_EQ(gsf->keys().size(), k);  // each landmark is seen in every frame
+          EXPECT_EQ(gsf->keys().size(),
+                    k);  // each landmark is seen in every frame
           for (size_t j = 1; j <= gsf->keys().size(); j++) {
-            EXPECT_EQ(gtsam::Symbol(gsf->keys().at(j-1)), gtsam::Symbol('x', j));
+            EXPECT_EQ(gtsam::Symbol(gsf->keys().at(j - 1)),
+                      gtsam::Symbol('x', j));
           }
         }
       }
@@ -348,7 +349,8 @@ TEST_F(BackendFixture, robotMovingWithConstantVelocity) {
     // Check the results!
     const gtsam::Values& results = vio_backend->getState();
     for (FrameId f_id = 0u; f_id <= k; f_id++) {
-      gtsam::Pose3 W_Pose_Blkf = results.at<gtsam::Pose3>(gtsam::Symbol('x', f_id));
+      gtsam::Pose3 W_Pose_Blkf =
+          results.at<gtsam::Pose3>(gtsam::Symbol('x', f_id));
       gtsam::Vector3 W_Vel_Blkf =
           results.at<gtsam::Vector3>(gtsam::Symbol('v', f_id));
       ImuBias imu_bias_lkf = results.at<ImuBias>(gtsam::Symbol('b', f_id));

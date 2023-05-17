@@ -34,10 +34,12 @@ GnssStereoDataProviderModule::GnssStereoDataProviderModule(
 
 GnssStereoDataProviderModule::InputUniquePtr
 GnssStereoDataProviderModule::getInputPacket() {
+  LOG(INFO) << "start GnssStereoDataProviderModule::getInputPacket()";
   //! Get left image + IMU data
   send_packet_ = false;
   StereoDataProviderModule::InputUniquePtr packet =
       StereoDataProviderModule::getInputPacket();
+  if (!packet) return nullptr;
 
   Gnss::UniquePtr gnss_data_payload = nullptr;
   if (!MISO::syncQueue(packet->timestamp_, &gnss_queue_, &gnss_data_payload)) {
@@ -62,7 +64,7 @@ GnssStereoDataProviderModule::getInputPacket() {
     vio_pipeline_callback_(std::move(gnss_packet));
   }
 
-  return nullptr;
+  return gnss_packet;
 }
 
 void GnssStereoDataProviderModule::shutdownQueues() {

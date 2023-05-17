@@ -116,11 +116,18 @@ class SimpleQueueSynchronizer : public QueueSynchronizerBase<T> {
     static constexpr size_t timeout_ms = 100000u;  // Wait 1500ms at most!
     for (; i < max_iterations && timestamp > payload_timestamp; ++i) {
       // TODO(Toni): add a timer to avoid waiting forever...
-      if (!queue->popBlockingWithTimeout(*pipeline_payload, timeout_ms)) {
+      if (!queue->popBlockingWithTimeout(
+              *pipeline_payload, timeout_ms, [&](T& p) {
+                Timestamp p_timestamp = p->timestamp_;
+                return timestamp >= p_timestamp;
+              })) {
         LOG(ERROR) << "Queu sync failed for module: " << name_id
                    << " with queue: " << queue->queue_id_ << "\n Reason: \n"
                    << "Queue status: "
                    << (queue->isShutdown() ? "Shutdown..." : "Timeout...");
+        LOG(ERROR) << "Need timestamp: " << timestamp;
+
+        //        queue->listQueue([](T& p) { LOG(ERROR) << p->timestamp_; });
         return false;
       } else {
         VLOG(5) << "Popping from: " << queue->queue_id_;
@@ -135,16 +142,19 @@ class SimpleQueueSynchronizer : public QueueSynchronizerBase<T> {
             << name_id;
       }
     }
-    CHECK_EQ(timestamp, payload_timestamp)
-        << "Syncing queue " << queue->queue_id_ << " in module " << name_id
-        << " failed;\n Could not retrieve exact timestamp requested: \n"
-        << " - Requested timestamp: " << timestamp << '\n'
-        << " - Actual timestamp:    " << payload_timestamp << '\n'
-        << (i >= max_iterations
-                ? "Reached max number of sync attempts: " +
-                      std::to_string(max_iterations)
-                : "");
     CHECK(*pipeline_payload);
+    if (timestamp < payload_timestamp) {
+      //      CHECK_EQ(timestamp, payload_timestamp)
+      LOG(WARNING)
+          << "Syncing queue " << queue->queue_id_ << " in module " << name_id
+          << " failed;\n Could not retrieve exact timestamp requested: \n"
+          << " - Requested timestamp: " << timestamp << '\n'
+          << " - Actual timestamp:    " << payload_timestamp << '\n'
+          << (i >= max_iterations ? "Reached max number of sync attempts: " +
+                                        std::to_string(max_iterations)
+                                  : "");
+      return false;
+    }
     return true;
   }
 

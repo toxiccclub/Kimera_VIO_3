@@ -19,8 +19,9 @@
 
 namespace VIO {
 
-class VisionImuFrontendModule : public 
-    SIMOPipelineModule<FrontendInputPacketBase, FrontendOutputPacketBase> {
+class VisionImuFrontendModule
+    : public SIMOPipelineModule<FrontendInputPacketBase,
+                                FrontendOutputPacketBase> {
  public:
   KIMERA_DELETE_COPY_CONSTRUCTORS(VisionImuFrontendModule);
   KIMERA_POINTER_TYPEDEFS(VisionImuFrontendModule);
@@ -37,20 +38,17 @@ class VisionImuFrontendModule : public
    * @param parallel_run
    * @param vio_frontend
    */
-  explicit VisionImuFrontendModule(
-      InputQueue* input_queue,
-      bool parallel_run,
-      VisionImuFrontend::UniquePtr vio_frontend);
+  explicit VisionImuFrontendModule(InputQueue* input_queue,
+                                   bool parallel_run,
+                                   VisionImuFrontend::UniquePtr vio_frontend);
 
   virtual ~VisionImuFrontendModule() = default;
 
  public:
-  virtual FrontendOutputPacketBase::UniquePtr
-      spinOnce(FrontendInputPacketBase::UniquePtr input);
+  virtual FrontendOutputPacketBase::UniquePtr spinOnce(
+      FrontendInputPacketBase::UniquePtr input);
 
-  inline bool isInitialized() const {
-    return vio_frontend_->isInitialized();
-  }
+  inline bool isInitialized() const { return vio_frontend_->isInitialized(); }
 
   //! Imu related
   inline void updateAndResetImuBias(const ImuBias& imu_bias) const {

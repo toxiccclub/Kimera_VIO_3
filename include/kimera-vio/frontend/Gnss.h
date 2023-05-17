@@ -44,7 +44,7 @@ class Gnss : public PipelinePayload {
       : PipelinePayload(timestamp), nav_pos_(pos) {}
 
   Gnss(const Timestamp& timestamp, const gtsam::Vector3& pos, bool undefined)
-      : PipelinePayload(timestamp), nav_pos_(pos), undefined_(undefined_) {}
+      : PipelinePayload(timestamp), nav_pos_(pos), undefined_(undefined) {}
 
   // TODO(TONI): delete all copy constructors!!
   // Look at the waste of time this is :O

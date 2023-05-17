@@ -22,11 +22,9 @@
 
 #include "kimera-vio/common/VioNavState.h"
 #include "kimera-vio/dataprovider/DataProviderInterface-definitions.h"
-//#include "kimera-vio/dataprovider/DataProviderInterface.h"
 #include "kimera-vio/dataprovider/EurocDataProvider.h"
-#include "kimera-vio/frontend/Frame.h"
-#include "kimera-vio/frontend/StereoImuSyncPacket.h"
-#include "kimera-vio/frontend/StereoMatchingParams.h"
+#include "kimera-vio/frontend/Gnss-definitions.h"
+#include "kimera-vio/frontend/Gnss.h"
 #include "kimera-vio/logging/Logger.h"
 #include "kimera-vio/utils/Macros.h"
 
@@ -45,11 +43,9 @@ class GNSSVIODataProvider : public EurocDataProvider {
   GNSSVIODataProvider(const std::string& dataset_path,
                       const int& initial_k,
                       const int& final_k,
-                      const VioParams& vio_params)
-      : EurocDataProvider(dataset_path, initial_k, final_k, vio_params) {}
+                      const VioParams& vio_params);
   //! Ctor from gflags
-  explicit GNSSVIODataProvider(const VioParams& vio_params)
-      : EurocDataProvider(vio_params) {}
+  explicit GNSSVIODataProvider(const VioParams& vio_params);
 
   virtual ~GNSSVIODataProvider() {}
 
@@ -63,12 +59,31 @@ class GNSSVIODataProvider : public EurocDataProvider {
   virtual bool spin() override;
 
  protected:
+  typedef std::function<void(Gnss::UniquePtr)> GnssInputCallback;
+  GnssInputCallback gnss_callback_;
+
+  void parseGnss(const std::string& input_dataset_path,
+                 const std::string& gnssName);
+
+  std::vector<GnssMeasurement> gnss_measurements_;
   /**
    * @brief spinOnce Send data to VIO pipeline on a per-frame basis
    * @return if the dataset finished or not
    */
   //  virtual bool spinOnce();
+ private:
+  void parseNMEAFile(const std::string& input_dataset_path,
+                     const std::string& gnssName);
+  void parseNMEAStream() {}
+
+  void parseLocalFile(const std::string& input_dataset_path,
+                      const std::string& gnssName);
+
  public:
+  inline void registerGnssCallback(const GnssInputCallback& callback) {
+    gnss_callback_ = callback;
+  }
+
   const std::string kGnssName = "gnss0";
 };
 

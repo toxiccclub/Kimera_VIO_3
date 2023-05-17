@@ -97,6 +97,7 @@ namespace VIO {
 
 /* -------------------------------------------------------------------------- */
 RegularVioBackend::RegularVioBackend(
+    const BackendType& bk_type,
     const Pose3& B_Pose_leftCam,
     const StereoCalibPtr& stereo_calibration,
     const BackendParams& backend_params,
@@ -104,7 +105,8 @@ RegularVioBackend::RegularVioBackend(
     const BackendOutputParams& backend_output_params,
     const bool& log_output)
     : regular_vio_params_(RegularVioBackendParams::safeCast(backend_params)),
-      VioBackend(B_Pose_leftCam,
+      VioBackend(bk_type,
+                 B_Pose_leftCam,
                  stereo_calibration,
                  backend_params,
                  imu_params,
@@ -144,12 +146,13 @@ RegularVioBackend::RegularVioBackend(
       << "Monocular calibration should match Stereo calibration";
 }
 
-/* -------------------------------------------------------------------------- */
-bool RegularVioBackend::addVisualInertialStateAndOptimize(
+void RegularVioBackend::addVisualInertialState(
     const Timestamp& timestamp_kf_nsec,
     const StatusStereoMeasurements& status_smart_stereo_measurements_kf,
     const gtsam::PreintegrationType& pim,
+    gtsam::FactorIndices& extra_factor_slots_to_delete,
     boost::optional<gtsam::Pose3> stereo_ransac_body_pose) {
+  LOG(INFO) << "RegularVioBackend::addVisualInertialState";
   debug_info_.resetAddedFactorsStatistics();
 
   //  std::cout << "addVisualInertialStateAndOptimize " << last_kf_id_ << " "
@@ -361,20 +364,16 @@ bool RegularVioBackend::addVisualInertialStateAndOptimize(
   /////////////////// OPTIMIZE /////////////////////////////////////////////////
   // This lags 1 step behind to mimic hw.
   imu_bias_prev_kf_ = imu_bias_lkf_;
+  extra_factor_slots_to_delete = delete_slots;
 
   //  std::cout << "addVisualInertialStateAndOptimize opt " << last_kf_id_ << "
   //  "
   //            << curr_kf_id_ << "\n";
   //  new_imu_prior_and_other_factors_.print();
+}
 
-  VLOG(10) << "Starting optimize...";
-  bool is_smoother_ok = optimize(timestamp_kf_nsec,
-                                 curr_kf_id_,
-                                 backend_params_.numOptimize_,
-                                 delete_slots);
-  VLOG(10) << "Finished optimize.";
-
-  if (is_smoother_ok) {
+void RegularVioBackend::postOptimize(bool smoother) {
+  if (smoother) {
     // Sanity check: ensure no one is removing planes outside
     // updatePlaneEstimates.
     CHECK_LE(nr_of_planes_, planes_.size());
@@ -391,7 +390,28 @@ bool RegularVioBackend::addVisualInertialStateAndOptimize(
     // and must be deleted from the factor graph.
     delete_slots_of_converted_smart_factors_.resize(0);
   }
+}
 
+/* -------------------------------------------------------------------------- */
+bool RegularVioBackend::addVisualInertialStateAndOptimize(
+    const Timestamp& timestamp_kf_nsec,
+    const StatusStereoMeasurements& status_smart_stereo_measurements_kf,
+    const gtsam::PreintegrationType& pim,
+    boost::optional<gtsam::Pose3> stereo_ransac_body_pose) {
+  gtsam::FactorIndices extra_factor_slots_to_delete;
+  addVisualInertialState(timestamp_kf_nsec,
+                         status_smart_stereo_measurements_kf,
+                         pim,
+                         extra_factor_slots_to_delete,
+                         stereo_ransac_body_pose);
+
+  VLOG(10) << "Starting optimize...";
+  bool is_smoother_ok = optimize(timestamp_kf_nsec,
+                                 curr_kf_id_,
+                                 backend_params_.numOptimize_,
+                                 extra_factor_slots_to_delete);
+  VLOG(10) << "Finished optimize.";
+  postOptimize(is_smoother_ok);
   return is_smoother_ok;
 }
 

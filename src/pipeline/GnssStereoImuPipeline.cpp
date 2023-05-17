@@ -37,7 +37,7 @@ GnssStereoImuPipeline::GnssStereoImuPipeline(
     const VioParams& params,
     Visualizer3D::UniquePtr&& visualizer,
     DisplayBase::UniquePtr&& displayer)
-    : StereoImuPipeline(params) {
+    : StereoImuPipeline(params, 0) {
   //! Create Stereo Camera
   CHECK_EQ(params.camera_params_.size(), 2u)
       << "Need two cameras for StereoImuPipeline.";
@@ -47,13 +47,13 @@ GnssStereoImuPipeline::GnssStereoImuPipeline(
   //! Create DataProvider
   data_provider_module_ = VIO::make_unique<GnssStereoDataProviderModule>(
       &frontend_input_queue_,
-      "Stereo Data Provider",
+      "Gnss Stereo Data Provider",
       parallel_run_,
       // TODO(Toni): these params should not be sent...
       params.frontend_params_.stereo_matching_params_);
 
-  //  data_provider_module_->registerVioPipelineCallback(
-  //      std::bind(&StereoImuPipeline::spinOnce, this, std::placeholders::_1));
+  data_provider_module_->registerVioPipelineCallback(
+      std::bind(&GnssStereoImuPipeline::spinOnce, this, std::placeholders::_1));
 
   //! Create Frontend
   vio_frontend_module_ = VIO::make_unique<VisionImuFrontendModule>(
@@ -65,25 +65,26 @@ GnssStereoImuPipeline::GnssStereoImuPipeline(
           gtsam::imuBias::ConstantBias(),
           params.frontend_params_,
           stereo_camera_,
-
+          params.gnss_params_,
           FLAGS_visualize ? &display_input_queue_ : nullptr,
           FLAGS_log_output));
   auto& backend_input_queue = backend_input_queue_;  //! for the lambda below
   vio_frontend_module_->registerOutputCallback(
       [&backend_input_queue](const FrontendOutputPacketBase::Ptr& output) {
-        StereoFrontendOutput::Ptr converted_output =
-            VIO::safeCast<FrontendOutputPacketBase, StereoFrontendOutput>(
+        GnssStereoFrontendOutput::Ptr converted_output =
+            VIO::safeCast<FrontendOutputPacketBase, GnssStereoFrontendOutput>(
                 output);
 
         if (converted_output && converted_output->is_keyframe_) {
           //! Only push to Backend input queue if it is a keyframe!
-          backend_input_queue.push(VIO::make_unique<BackendInput>(
+          backend_input_queue.push(VIO::make_unique<GnssBackendInput>(
               converted_output->stereo_frame_lkf_.timestamp_,
               converted_output->status_stereo_measurements_,
               converted_output->tracker_status_,
               converted_output->pim_,
               converted_output->imu_acc_gyrs_,
-              converted_output->relative_pose_body_stereo_));
+              converted_output->relative_pose_body_stereo_,
+              converted_output->gnss_nav_data_));
         } else {
           VLOG(5)
               << "Frontend did not output a keyframe, skipping Backend input.";
@@ -110,6 +111,7 @@ GnssStereoImuPipeline::GnssStereoImuPipeline(
           stereo_camera_->getStereoCalib(),
           *backend_params_,
           imu_params_,
+          params.gnss_params_,
           backend_output_params,
           FLAGS_log_output));
   //  vio_backend_module_->registerOnFailureCallback(

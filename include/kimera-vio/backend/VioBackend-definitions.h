@@ -14,16 +14,14 @@
 
 #pragma once
 
-#include <vector>
-
-#include <boost/optional.hpp>
-
 #include <glog/logging.h>
-
 #include <gtsam/geometry/Cal3_S2.h>
 #include <gtsam/geometry/StereoPoint2.h>
 #include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 #include <gtsam_unstable/slam/SmartStereoProjectionPoseFactor.h>
+
+#include <boost/optional.hpp>
+#include <vector>
 
 #include "kimera-vio/common/VioNavState.h"
 #include "kimera-vio/common/vio_types.h"
@@ -282,8 +280,8 @@ struct BackendInput : public PipelinePayload {
                 << TrackerStatusSummary::asString(stereo_tracking_status_);
     }
     if (pim_) pim_->print("PIM : ");
-    LOG_IF(INFO, stereo_ransac_body_pose_) << "Stereo Ransac Body Pose: "
-                                           << *stereo_ransac_body_pose_;
+    LOG_IF(INFO, stereo_ransac_body_pose_)
+        << "Stereo Ransac Body Pose: " << *stereo_ransac_body_pose_;
   }
 };
 
@@ -352,6 +350,10 @@ struct BackendOutput : public PipelinePayload {
  *  - kStructuralRegularities: the `regular VIO` Backend, using structural
  * regularities derived from the 3D Mesh.
  */
-enum class BackendType { kStereoImu = 0, kStructuralRegularities = 1 };
+enum class BackendType {
+  kStereoImu = 0,
+  kStructuralRegularities = 1,
+  kGnssStereoImu = 2
+};
 
 }  // namespace VIO

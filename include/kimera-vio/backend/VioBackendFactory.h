@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "kimera-vio/backend/GnssVioBackend-definitions.h"
+#include "kimera-vio/backend/GnssVioBackend.h"
 #include "kimera-vio/backend/RegularVioBackend.h"
 #include "kimera-vio/backend/VioBackend-definitions.h"
 #include "kimera-vio/backend/VioBackend.h"
@@ -35,11 +37,49 @@ class BackendFactory {
       const StereoCalibPtr& stereo_calibration,
       const BackendParams& backend_params,
       const ImuParams& imu_params,
+      const GnssParams& gnss_params,
       const BackendOutputParams& backend_output_params,
       bool log_output) {
     switch (backend_type) {
       case BackendType::kStereoImu: {
-        return VIO::make_unique<VioBackend>(B_Pose_leftCam,
+        LOG(FATAL) << "Tried to create a VioBackend"
+                   << "with a GnssVioBackend!";
+      }
+      case BackendType::kStructuralRegularities: {
+        LOG(FATAL) << "Tried to create a RegularVioBackend"
+                   << "with a GnssVioBackend!";
+      }
+      case BackendType::kGnssStereoImu: {
+        return VIO::make_unique<GnssVioBackend>(backend_type,
+                                                B_Pose_leftCam,
+                                                stereo_calibration,
+                                                backend_params,
+                                                imu_params,
+                                                backend_output_params,
+                                                gnss_params,
+                                                log_output);
+      }
+      default: {
+        LOG(FATAL) << "Requested Backend type is not supported.\n"
+                   << "Currently supported Backend types:\n"
+                   << "0: normal VIO\n 1: regular VIO\n"
+                   << " but requested Backend: "
+                   << static_cast<int>(backend_type);
+      }
+    }
+  }
+  static VioBackend::UniquePtr createBackend(
+      const BackendType& backend_type,
+      const Pose3& B_Pose_leftCam,
+      const StereoCalibPtr& stereo_calibration,
+      const BackendParams& backend_params,
+      const ImuParams& imu_params,
+      const BackendOutputParams& backend_output_params,
+      bool log_output) {
+    switch (backend_type) {
+      case BackendType::kStereoImu: {
+        return VIO::make_unique<VioBackend>(backend_type,
+                                            B_Pose_leftCam,
                                             stereo_calibration,
                                             backend_params,
                                             imu_params,
@@ -47,12 +87,17 @@ class BackendFactory {
                                             log_output);
       }
       case BackendType::kStructuralRegularities: {
-        return VIO::make_unique<RegularVioBackend>(B_Pose_leftCam,
+        return VIO::make_unique<RegularVioBackend>(backend_type,
+                                                   B_Pose_leftCam,
                                                    stereo_calibration,
                                                    backend_params,
                                                    imu_params,
                                                    backend_output_params,
                                                    log_output);
+      }
+      case BackendType::kGnssStereoImu: {
+        LOG(FATAL) << "Tried to create a GnssVioBackend"
+                   << "with a VioBackend!";
       }
       default: {
         LOG(FATAL) << "Requested Backend type is not supported.\n"

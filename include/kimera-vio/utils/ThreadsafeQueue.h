@@ -14,16 +14,17 @@
 
 #pragma once
 
+#include <glog/logging.h>
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <queue>
 #include <string>
 #include <utility>
-
-#include <glog/logging.h>
 
 #include "kimera-vio/common/vio_types.h"
 #include "kimera-vio/utils/Macros.h"
@@ -135,6 +136,18 @@ class ThreadsafeQueueBase {
     return shutdown_;
   }
 
+  void listQueue(std::function<void(T&)> func) {
+    std::lock_guard<std::mutex> lk(mutex_);
+    auto sz = data_queue_.size();
+    for (auto i = 0; i < sz; ++i) {
+      auto value = std::move(*data_queue_.front());
+      data_queue_.pop();
+      func(value);
+      std::shared_ptr<T> data(std::make_shared<T>(std::move(value)));
+      data_queue_.push(data);
+    }
+  }
+
  public:
   std::string queue_id_;
 
@@ -200,6 +213,18 @@ class ThreadsafeQueue : public ThreadsafeQueueBase<T> {
    * @return Returns false if the queue has been shutdown or if it was timeout.
    */
   bool popBlockingWithTimeout(T& value, size_t duration_ms) override;
+
+  /**
+   * @brief popBlockingUpToTime Same as popBlockingUpToTime, but further returns
+   * early if the given duration has passed...
+   * @param value Returned value
+   * @param duration_ms Time to wait for a msg [in milliseconds]
+   * @param check_func check function for enable pop
+   * @return Returns false if the queue has been shutdown or if it was timeout.
+   */
+  bool popBlockingWithTimeout(T& value,
+                              size_t duration_ms,
+                              std::function<bool(T&)> check_func);
 
   /** \brief Pop without blocking, just checks once if the queue is empty.
    * Returns true if the value could be retrieved, false otherwise.
@@ -350,6 +375,25 @@ bool ThreadsafeQueue<T>::popBlockingWithTimeout(T& value, size_t duration_ms) {
   value = std::move(*data_queue_.front());
   data_queue_.pop();
   return true;
+}
+
+template <typename T>
+bool ThreadsafeQueue<T>::popBlockingWithTimeout(
+    T& value,
+    size_t duration_ms,
+    std::function<bool(T&)> check_func) {
+  std::unique_lock<std::mutex> lk(mutex_);
+  data_cond_.wait_for(lk, std::chrono::milliseconds(duration_ms), [this] {
+    return !data_queue_.empty() || shutdown_;
+  });
+  if (shutdown_ || data_queue_.empty()) return false;
+  value = std::move(*data_queue_.front());
+  if (check_func(value)) {
+    data_queue_.pop();
+    return true;
+  }
+  *data_queue_.front() = std::move(value);
+  return false;
 }
 
 template <typename T>

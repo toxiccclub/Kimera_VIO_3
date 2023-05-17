@@ -48,7 +48,7 @@ class VisionImuFrontendFactory {
                                                        log_output);
       }
       case FrontendType::kStereoImu: {
-        LOG(FATAL) << "Tried to create a StereoVisionFrontEnd"
+        LOG(FATAL) << "Tried to create a StereoVisionFrontEnd "
                    << "with a Mono Camera!";
       }
       default: {
@@ -56,6 +56,7 @@ class VisionImuFrontendFactory {
                    << "Currently supported frontend types:\n"
                    << "0: Mono + IMU \n"
                    << "1: Stereo + IMU \n"
+                   << "3: Gnss + Stereo + IMU \n"
                    << " but requested frontend: "
                    << static_cast<int>(frontend_type);
       }
@@ -73,7 +74,7 @@ class VisionImuFrontendFactory {
       bool log_output) {
     switch (frontend_type) {
       case FrontendType::kMonoImu: {
-        LOG(FATAL) << "Tried to create a MonoVisionFrontEnd"
+        LOG(FATAL) << "Tried to create a MonoVisionFrontEnd "
                    << "with a StereoCamera!";
       }
       case FrontendType::kStereoImu: {
@@ -89,6 +90,7 @@ class VisionImuFrontendFactory {
                    << "Currently supported frontend types:\n"
                    << "0: Mono + IMU \n"
                    << "1: Stereo + IMU \n"
+                   << "3: Gnss + Stereo + IMU \n"
                    << " but requested frontend: "
                    << static_cast<int>(frontend_type);
       }
@@ -108,11 +110,11 @@ class VisionImuFrontendFactory {
     switch (frontend_type) {
       case FrontendType::kMonoImu: {
         LOG(FATAL) << "Tried to create a MonoVisionFrontEnd"
-                   << "with a GnssStereoCamera!";
+                   << " with a GnssStereoCamera!";
       }
       case FrontendType::kStereoImu: {
         LOG(FATAL) << "Tried to create a StereoVisionFrontEnd"
-                   << "with a GnssStereoCamera!";
+                   << " with a GnssStereoCamera!";
       }
       case FrontendType::kGnssStereoImu:
         return VIO::make_unique<GnssStereoVisionImuFrontend>(imu_params,
@@ -128,6 +130,7 @@ class VisionImuFrontendFactory {
                    << "Currently supported frontend types:\n"
                    << "0: Mono + IMU \n"
                    << "1: Stereo + IMU \n"
+                   << "3: Gnss + Stereo + IMU \n"
                    << " but requested frontend: "
                    << static_cast<int>(frontend_type);
       }

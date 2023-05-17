@@ -44,6 +44,7 @@ endif()
 find_package(KimeraRPGO REQUIRED)
 # Pangolin is optional
 find_package(Pangolin QUIET)
+find_package(NemaTode REQUIRED CONFIG PATHS "/usr/local/lib/cmake")
 
 include(VerifyGtsamConfig)
 option(KIMERA_VERIFY_GTSAM_CONFIG "Check that GTSAM was compiled with the right options" ON)
@@ -141,6 +142,7 @@ target_link_libraries(${PROJECT_NAME}
     ${GLOG_LIBRARIES}
     gtsam
     gtsam_unstable
+    NemaTode::NemaTode
 )
 target_include_directories(${PROJECT_NAME}
   PUBLIC

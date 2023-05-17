@@ -65,13 +65,15 @@ DEFINE_bool(compute_state_covariance,
 namespace VIO {
 
 /* -------------------------------------------------------------------------- */
-VioBackend::VioBackend(const Pose3& B_Pose_leftCam,
+VioBackend::VioBackend(const BackendType& bk_type,
+                       const Pose3& B_Pose_leftCam,
                        const StereoCalibPtr& stereo_calibration,
                        const BackendParams& backend_params,
                        const ImuParams& imu_params,
                        const BackendOutputParams& backend_output_params,
                        bool log_output)
-    : backend_params_(backend_params),
+    : backend_type_(bk_type),
+      backend_params_(backend_params),
       imu_params_(imu_params),
       backend_output_params_(backend_output_params),
       backend_state_(BackendState::Bootstrap),
@@ -132,16 +134,17 @@ VioBackend::VioBackend(const Pose3& B_Pose_leftCam,
 BackendOutput::UniquePtr VioBackend::spinOnce(const BackendInput& input) {
   if (VLOG_IS_ON(10)) input.print();
   LOG(INFO) << "VioBackend::spinOnce " << input.timestamp_;
-  // std::cout << "spin once" << input.timestamp_;
   // new_imu_prior_and_other_factors_.print();
   bool backend_status = false;
   switch (backend_state_) {
     case BackendState::Bootstrap: {
+      LOG(INFO) << "BackendState::Bootstrap";
       initializeBackend(input);
       backend_status = true;
       break;
     }
     case BackendState::Nominal: {
+      LOG(INFO) << "BackendState::Nominal";
       // Process data with VIO.
       backend_status = addVisualInertialStateAndOptimize(input);
       break;
@@ -259,16 +262,13 @@ bool VioBackend::initStateAndSetPriors(
                   backend_params_.numOptimize_);
 }
 
-/* -------------------------------------------------------------------------- */
-// Workhorse that stores data and optimizes at each keyframe.
-// [in] timestamp_kf_nsec, keyframe timestamp.
-// [in] status_smart_stereo_measurements_kf, vision data.
-// [in] stereo_ransac_body_pose, inertial data.
-bool VioBackend::addVisualInertialStateAndOptimize(
+void VioBackend::addVisualInertialState(
     const Timestamp& timestamp_kf_nsec,
     const StatusStereoMeasurements& status_smart_stereo_measurements_kf,
     const gtsam::PreintegrationType& pim,
+    gtsam::FactorIndices& extra_factor_slots_to_delete,
     boost::optional<gtsam::Pose3> stereo_ransac_body_pose) {
+  LOG(INFO) << "VioBackend::addVisualInertialState";
   debug_info_.resetAddedFactorsStatistics();
 
   //  std::cout << "addVisualInertialStateAndOptimize0 " << last_kf_id_ << " "
@@ -337,15 +337,15 @@ bool VioBackend::addVisualInertialStateAndOptimize(
       break;
     }
 
-    // This did not improve in any case
-    //  case TrackingStatus::INVALID :// ransac failed hence we cannot
-    //  trust features
-    //    if (verbosity_ >= 7) {printf("Add constant velocity factor
-    //    (monoRansac is INVALID)\n");}
-    //    addConstantVelocityFactor(last_id_, cur_id_); break;
+      // This did not improve in any case
+      //  case TrackingStatus::INVALID :// ransac failed hence we cannot
+      //  trust features
+      //    if (verbosity_ >= 7) {printf("Add constant velocity factor
+      //    (monoRansac is INVALID)\n");}
+      //    addConstantVelocityFactor(last_id_, cur_id_); break;
 
-    // TrackingStatus::VALID, FEW_MATCHES, INVALID, DISABLED : //
-    // we add features in VIO
+      // TrackingStatus::VALID, FEW_MATCHES, INVALID, DISABLED : //
+      // we add features in VIO
     default: {
       addLandmarksToGraph(landmarks_kf);
       break;
@@ -357,8 +357,29 @@ bool VioBackend::addVisualInertialStateAndOptimize(
   // imu_bias_lkf_ gets updated in the optimize call.
   imu_bias_prev_kf_ = imu_bias_lkf_;
 
+  extra_factor_slots_to_delete = {};
+}
+
+/* -------------------------------------------------------------------------- */
+// Workhorse that stores data and optimizes at each keyframe.
+// [in] timestamp_kf_nsec, keyframe timestamp.
+// [in] status_smart_stereo_measurements_kf, vision data.
+// [in] stereo_ransac_body_pose, inertial data.
+bool VioBackend::addVisualInertialStateAndOptimize(
+    const Timestamp& timestamp_kf_nsec,
+    const StatusStereoMeasurements& status_smart_stereo_measurements_kf,
+    const gtsam::PreintegrationType& pim,
+    boost::optional<gtsam::Pose3> stereo_ransac_body_pose) {
+  gtsam::FactorIndices extra_factor_slots_to_delete;
+  addVisualInertialState(timestamp_kf_nsec,
+                         status_smart_stereo_measurements_kf,
+                         pim,
+                         extra_factor_slots_to_delete,
+                         stereo_ransac_body_pose);
   return optimize(timestamp_kf_nsec, curr_kf_id_, backend_params_.numOptimize_);
 }
+
+void VioBackend::postOptimize(bool smoother) {}
 
 bool VioBackend::addVisualInertialStateAndOptimize(const BackendInput& input) {
   bool use_stereo_btw_factor =
@@ -375,13 +396,20 @@ bool VioBackend::addVisualInertialStateAndOptimize(const BackendInput& input) {
          "not available!";
   CHECK(input.status_stereo_measurements_kf_);
   CHECK(input.pim_);
-  bool is_smoother_ok = addVisualInertialStateAndOptimize(
+  gtsam::FactorIndices extra_factor_slots_to_delete;
+  addVisualInertialState(
       input.timestamp_,  // Current time for fixed lag smoother.
       *input.status_stereo_measurements_kf_,  // Vision data.
       *input.pim_,                            // Imu preintegrated data.
+      extra_factor_slots_to_delete,
       use_stereo_btw_factor
           ? input.stereo_ransac_body_pose_
           : boost::none);  // optional: pose estimate from stereo ransac
+  bool is_smoother_ok = optimize(input.timestamp_,
+                                 curr_kf_id_,
+                                 backend_params_.numOptimize_,
+                                 extra_factor_slots_to_delete);
+  postOptimize(is_smoother_ok);
   // Bookkeeping
   timestamp_lkf_ = input.timestamp_;
   return is_smoother_ok;
@@ -1194,6 +1222,7 @@ void VioBackend::addConstantVelocityFactor(const FrameId& from_id,
 /* -------------------------------- UPDATE ---------------------------------- */
 void VioBackend::updateStates(const FrameId& cur_id) {
   VLOG(10) << "Starting to calculate estimate.";
+  LOG(INFO) << "Starting to calculate estimate=" << cur_id;
   state_ = smoother_->calculateEstimate();
   VLOG(10) << "Finished to calculate estimate.";
 
@@ -1207,6 +1236,9 @@ void VioBackend::updateStates(const FrameId& cur_id) {
   W_Vel_B_lkf_ = state_.at<Vector3>(gtsam::Symbol(kVelocitySymbolChar, cur_id));
   imu_bias_lkf_ = state_.at<gtsam::imuBias::ConstantBias>(
       gtsam::Symbol(kImuBiasSymbolChar, cur_id));
+
+  LOG(INFO) << "updateStates=" << cur_id
+            << " current pose = " << W_Pose_B_lkf_.translation();
 
   VLOG(1) << "Backend: Update IMU Bias.";
   CHECK(imu_bias_update_callback_) << "Did you forget to register the IMU bias "
@@ -1260,11 +1292,11 @@ bool VioBackend::updateSmoother(Smoother::Result* result,
     LOG(ERROR) << "ERROR: Variable has type '" << symb.chr() << "' "
                << "and index " << symb.index() << std::endl;
 
-    smoother_->getFactors().print("Smoother's factors:\n[\n\t");
-    LOG(INFO) << " ]";
-    state_.print("State values\n[\n\t");
-    LOG(INFO) << " ]";
-    printSmootherInfo(new_factors, delete_slots);
+    //    smoother_->getFactors().print("Smoother's factors:\n[\n\t");
+    //    LOG(INFO) << " ]";
+    //    state_.print("State values\n[\n\t");
+    //    LOG(INFO) << " ]";
+    //    printSmootherInfo(new_factors, delete_slots);
     return false;
   } catch (const gtsam::InvalidNoiseModel& e) {
     LOG(ERROR) << e.what();
@@ -1324,6 +1356,7 @@ bool VioBackend::updateSmoother(Smoother::Result* result,
     // Catch anything thrown within try block that derives from
     // std::exception.
     LOG(ERROR) << e.what();
+    new_factors.print();
     printSmootherInfo(new_factors, delete_slots);
     return false;
   } catch (...) {

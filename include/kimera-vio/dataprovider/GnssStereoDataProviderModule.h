@@ -60,6 +60,10 @@ class GnssStereoDataProviderModule : public StereoDataProviderModule {
     CHECK(gnss_data);
     gnss_queue_.push(std::move(gnss_data));
   }
+  inline void fillGnssQueueBlockingIfFull(Gnss::UniquePtr gnss_data) {
+    CHECK(gnss_data);
+    gnss_queue_.pushBlockingIfFull(std::move(gnss_data), 5u);
+  }
 
  protected:
   //! The data synchronization function

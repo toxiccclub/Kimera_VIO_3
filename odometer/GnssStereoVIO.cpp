@@ -91,13 +91,27 @@ int main(int argc, char* argv[]) {
   dataset_parser->registerLeftFrameCallback(std::bind(
       &VIO::Pipeline::fillLeftFrameQueue, vio_pipeline, std::placeholders::_1));
 
-  if (vio_params.frontend_type_ == VIO::FrontendType::kStereoImu) {
+  if (vio_params.frontend_type_ == VIO::FrontendType::kStereoImu ||
+      vio_params.frontend_type_ == VIO::FrontendType::kGnssStereoImu) {
     VIO::StereoImuPipeline::Ptr stereo_pipeline =
         VIO::safeCast<VIO::Pipeline, VIO::StereoImuPipeline>(vio_pipeline);
 
     dataset_parser->registerRightFrameCallback(
         std::bind(&VIO::StereoImuPipeline::fillRightFrameQueue,
                   stereo_pipeline,
+                  std::placeholders::_1));
+  }
+  if (vio_params.frontend_type_ == VIO::FrontendType::kGnssStereoImu) {
+    VIO::GnssStereoImuPipeline::Ptr gnss_stereo_pipeline =
+        VIO::safeCast<VIO::Pipeline, VIO::GnssStereoImuPipeline>(vio_pipeline);
+
+    VIO::GNSSVIODataProvider::Ptr gnss_dataset_parser =
+        VIO::safeCast<VIO::DataProviderInterface, VIO::GNSSVIODataProvider>(
+            dataset_parser);
+
+    gnss_dataset_parser->registerGnssCallback(
+        std::bind(&VIO::GnssStereoImuPipeline::fillGnssQueue,
+                  gnss_stereo_pipeline,
                   std::placeholders::_1));
   }
 
