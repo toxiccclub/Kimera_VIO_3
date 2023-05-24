@@ -44,13 +44,14 @@ sudo apt-get install -y libboost-all-dev
 ```bash
 homebrew install vtk # (to check)
 ```
-  - On Ubuntu 18.04
+  - On Ubuntu 22.04
 ```bash
 # (libvtk5-dev, libgtk2.0-dev in ubuntu 16.04)
+# (libvtk6-dev ubuntu 18.04)
 sudo apt-get install -y \
       build-essential unzip pkg-config \
       libjpeg-dev libpng-dev libtiff-dev \
-      libvtk6-dev \
+      libvtk7-dev \
       libgtk-3-dev \
       libparmetis-dev \
       libatlas-base-dev gfortran
