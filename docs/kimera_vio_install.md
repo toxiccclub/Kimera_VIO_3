@@ -122,13 +122,18 @@ sudo make -j $(nproc) install
 
 ## Install OpenCV
 
+#### OpenCV dependencies
+```bash
+sudo apt install libopenjpip7 libopenjp2-tools libopenjpip-dec-server
+```
+
 #### OpenCV Source Install
 
 Download OpenCV and run cmake:
 ```bash
 git clone https://github.com/opencv/opencv.git
 cd opencv
-git checkout tags/3.3.1
+git checkout tags/4.5.5
 mkdir build
 cd build
 cmake -DWITH_VTK=On .. # Use -DWITH_TBB=On if you have TBB
