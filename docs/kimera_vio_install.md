@@ -92,6 +92,8 @@ cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release -DGTSAM_USE_SYSTEM_EIGEN=OFF -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON -DGTSAM_TANGENT_PREINTEGRATION=OFF ..
 ```
 
+To install library for current user only set `-DCMAKE_INSTALL_PREFIX=$HOME`
+
 Ensure that:
 - TBB is enabled: check for `--   Use Intel TBB                  : Yes` after running `cmake`.
 - Compilation is in Release mode: check for `--   Build type                     : Release` after running `cmake`.
