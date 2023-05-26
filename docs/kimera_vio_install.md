@@ -124,7 +124,7 @@ sudo make -j $(nproc) install
 
 #### OpenCV dependencies
 ```bash
-sudo apt install libopenjpip7 libopenjp2-tools libopenjpip-dec-server
+sudo apt install libopenjpip7 libopenjp2-tools libopenjpip-dec-server libopenjpip-server
 ```
 
 #### OpenCV Source Install
