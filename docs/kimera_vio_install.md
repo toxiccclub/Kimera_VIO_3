@@ -2,6 +2,8 @@
 
 Tested on Mac, Ubuntu 14.04, 16.04 & 18.04.
 
+Updated for Ubuntu 22.04
+
 If you want to avoid building all these dependencies yourself, we provide two options:
 
 1. **Docker image**: that will install them for you. See section [From Dockerfile](#From-Dockerfile) below.
@@ -38,6 +40,11 @@ sudo apt-get install -y cmake
 ```bash
 sudo apt-get install -y libboost-all-dev
 ```
+
+Boost 1.74 delivered with Ubuntu 22.04 breaks gtsam tests, so building latest boost with oficial instructions
+https://www.boost.org/doc/libs/1_82_0/more/getting_started/unix-variants.html is recommend instead.
+
+While working with custom buth you need to export `BOOST_ROOT` enveronment variable with value equal with boost install preffix.
 
 - OpenCV dependencies:
   - on Mac:
@@ -83,16 +90,19 @@ Clone GTSAM: `git clone git@github.com:borglab/gtsam.git`
 
 > Previously tested commits: `0c3e05f375c03c5ff5218e708db416b38f4113c8`
 
+> Current build with release 4.1.1
+
 Make build dir, and run `cmake`:
 
 ```bash
 cd gtsam
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release -DGTSAM_USE_SYSTEM_EIGEN=OFF -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON -DGTSAM_TANGENT_PREINTEGRATION=OFF ..
+cmake -DCMAKE_INSTALL_PREFIX=<path> -DCMAKE_BUILD_TYPE=Release -DGTSAM_USE_SYSTEM_EIGEN=OFF -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON -DGTSAM_TANGENT_PREINTEGRATION=OFF ..
 ```
 
-To install library for current user only set `-DCMAKE_INSTALL_PREFIX=$HOME`
+To install library for current user only set `-DCMAKE_INSTALL_PREFIX=$HOME`, 
+to install system-wide set `-DCMAKE_INSTALL_PREFIX=/usr/loca`
 
 Ensure that:
 - TBB is enabled: check for `--   Use Intel TBB                  : Yes` after running `cmake`.
@@ -132,12 +142,18 @@ sudo apt install libopenjpip7 libopenjp2-tools libopenjpip-dec-server libopenjpi
 Download OpenCV and run cmake:
 ```bash
 git clone https://github.com/opencv/opencv.git
+git clone https://github.com/opencv/opencv_contrib.git
+cd cv_contrib
+git checkout tags/4.5.5
+cd ..
 cd opencv
 git checkout tags/4.5.5
 mkdir build
 cd build
-cmake -DWITH_VTK=On .. # Use -DWITH_TBB=On if you have TBB
+cmake -DCMAKE_INSTALL_PREFIX=<path> -DCMAKE_BUILD_TYPE=Release -DWITH_TBB=ON -DWITH_VTK=ON -DOPENCV_EXTRA_MODULES_PATH=<path_to_contrib>/opencv_contrib/modules ..
 ```
+
+Make shure that module viz will be build.
 
 Finally, build and install OpenCV:
 ```bash
@@ -159,7 +175,7 @@ cd opengv
 mkdir build
 cd build
 # Replace path to your GTSAM's Eigen
-cmake .. -DEIGEN_INCLUDE_DIR=/home/tonirv/Code/gtsam/gtsam/3rdparty/Eigen -DEIGEN_INCLUDE_DIRS=/home/tonirv/Code/gtsam/gtsam/3rdparty/Eigen
+cmake -DCMAKE_INSTALL_PREFIX=<path> -DCMAKE_BUILD_TYPE=Release -DEIGEN_INCLUDE_DIR=<path_to_gtsam>/gtsam/gtsam/3rdparty/Eigen -DEIGEN_INCLUDE_DIRS=<path_to_gtsam>/gtsam/gtsam/3rdparty/Eigen ..
 ```
 
 Finally, install opengv:
@@ -176,7 +192,7 @@ git clone https://github.com/dorian3d/DBoW2.git
 cd DBoW2
 mkdir build
 cd build
-cmake ..
+cmake -DCMAKE_INSTALL_PREFIX=<path> -DCMAKE_BUILD_TYPE=Release ..
 sudo make -j $(nproc) install
 ```
 
@@ -187,7 +203,7 @@ git clone https://github.com/MIT-SPARK/Kimera-RPGO.git
 cd Kimera-RPGO
 mkdir build
 cd build
-cmake ..
+cmake -DCMAKE_INSTALL_PREFIX=<path> -DCMAKE_BUILD_TYPE=Release ..
 sudo make -j $(nproc)
 ```
 
