@@ -41,10 +41,10 @@ sudo apt-get install -y cmake
 sudo apt-get install -y libboost-all-dev
 ```
 
-Boost 1.74 delivered with Ubuntu 22.04 breaks gtsam tests, so building latest boost with oficial instructions
-https://www.boost.org/doc/libs/1_82_0/more/getting_started/unix-variants.html is recommend instead.
+While Boost 1.74 delivered with Ubuntu 22.04 breaks gtsam tests, building latest boost with official instructions
+https://www.boost.org/doc/libs/1_82_0/more/getting_started/unix-variants.html is strongly recommend instead.
 
-While working with custom buth you need to export `BOOST_ROOT` enveronment variable with value equal with boost install preffix.
+While working with custom build you need to export `BOOST_ROOT` enveronment variable with value equal with boost install preffix.
 
 - OpenCV dependencies:
   - on Mac:
