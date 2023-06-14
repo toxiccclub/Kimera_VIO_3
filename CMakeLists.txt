@@ -1,11 +1,19 @@
 cmake_minimum_required (VERSION 3.5)
 project(kimera_vio VERSION 1.0 LANGUAGES CXX C)
 
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # Make sure that custom modules like FindXXXX are found
 # Prefer to use system installation of gflags/glog
 set(GFLAGS_PREFER_EXPORTED_GFLAGS_CMAKE_CONFIGURATION TRUE)
 set(GLOG_PREFER_EXPORTED_GLOG_CMAKE_CONFIGURATION TRUE)
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
+
+set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC" )
+set( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC" )
 
 IF(APPLE)
     # Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
@@ -44,7 +52,7 @@ endif()
 find_package(KimeraRPGO REQUIRED)
 # Pangolin is optional
 find_package(Pangolin QUIET)
-find_package(NemaTode REQUIRED CONFIG PATHS "/usr/local/lib/cmake")
+#find_package(NemaTode REQUIRED CONFIG PATHS "/usr/local/lib/cmake")
 
 include(VerifyGtsamConfig)
 option(KIMERA_VERIFY_GTSAM_CONFIG "Check that GTSAM was compiled with the right options" ON)
@@ -130,6 +138,10 @@ add_subdirectory(src/visualizer)
 add_subdirectory(include/kimera-vio/third_party/triangle)
 add_subdirectory(src/third_party/triangle)
 
+add_subdirectory(3rd_party/NemaTode)
+
+set(CMAKE_CXX_STANDARD 20)
+
 target_link_libraries(${PROJECT_NAME}
   PRIVATE
     opengv
@@ -142,7 +154,7 @@ target_link_libraries(${PROJECT_NAME}
     ${GLOG_LIBRARIES}
     gtsam
     gtsam_unstable
-    NemaTode::NemaTode
+    NemaTode
 )
 target_include_directories(${PROJECT_NAME}
   PUBLIC
@@ -152,6 +164,7 @@ target_include_directories(${PROJECT_NAME}
     ${GTSAM_INCLUDE_DIR}
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
     $<INSTALL_INTERFACE:include>
+    ${NemaTode_INCLUDE_DIRS}
 )
 
 # Pangolin is optional

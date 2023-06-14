@@ -1,3 +1,6 @@
 [submodule "dev_tools/linter"]
 	path = dev_tools/linter
 	url = https://github.com/ToniRV/linter.git
+[submodule "3rd_party/NemaTode"]
+	path = 3rd_party/NemaTode
+	url = https://github.com/ckgt/NemaTode
