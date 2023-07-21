@@ -4,3 +4,7 @@
 [submodule "3rd_party/NemaTode"]
 	path = 3rd_party/NemaTode
 	url = https://github.com/ckgt/NemaTode
+[submodule "3rd_party/neosmart/pevents"]
+	path = 3rd_party/neosmart/pevents
+	url = https://github.com/neosmart/pevents.git
+	branch = 1.22.11
