@@ -1,0 +1,124 @@
+# Указываем базовый образ для архитектуры ARM64
+FROM ubuntu:22.04
+
+# Метаданные об обслуживании образа
+LABEL maintainer="mabate@mit.edu"
+
+# Устанавливаем переменную окружения, чтобы предотвратить запросы интерактивного ввода
+ENV DEBIAN_FRONTEND=noninteractive
+
+ENV DIRPATH /root/
+WORKDIR $DIRPATH
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      apt-utils \
+      cmake \
+      wget \
+      pkg-config \
+      tar \
+      xvfb \
+      build-essential unzip bzip2 \
+      libjpeg-dev libpng-dev libtiff-dev \
+      libvtk7-dev \
+      libgtk-3-dev \
+      libparmetis-dev \
+      libatlas-base-dev gfortran \
+      libtbb2-dev git ca-certificates \
+      libopenjpip7 \
+      libopenjp2-tools \
+      libopenjpip-dec-server \
+      libopenjpip-server \
+      libgflags-dev \
+      libgoogle-glog-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем переменную окружения для версии Boost
+ENV BOOST_VERSION=1.82.0 
+ENV BOOST_VERSION_UNDERSCORE=1_82_0 
+ENV BOOST_INSTALL_PREFIX=/usr/local 
+
+# Скачиваем и распаковываем Boost 
+RUN wget https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_UNDERSCORE}.tar.bz2 && \
+    tar --bzip2 -xf boost_${BOOST_VERSION_UNDERSCORE}.tar.bz2 && \
+    rm boost_${BOOST_VERSION_UNDERSCORE}.tar.bz2 
+
+# Переходим в директорию с исходным кодом Boost 
+WORKDIR /root/boost_${BOOST_VERSION_UNDERSCORE}
+
+#Запускаем bootstrap и b2 для сборки и установки Boost 
+RUN ./bootstrap.sh --prefix=${BOOST_INSTALL_PREFIX} --with-libraries=all&& \ 
+    ./b2 install 
+
+# Экспортируем переменную среды BOOST_ROOT 
+ENV BOOST_ROOT=${BOOST_INSTALL_PREFIX} 
+
+# Удаляем исходные файлы Boost, чтобы уменьшить размер образа 
+WORKDIR /root 
+
+RUN rm -rf /root/boost_${BOOST_VERSION_UNDERSCORE}
+
+# Клонирование репозиториев OpenCV и OpenCV_contrib
+RUN git clone https://github.com/opencv/opencv.git && \
+    git clone https://github.com/opencv/opencv_contrib.git && \
+    cd opencv_contrib && \
+    git checkout tags/4.5.5 && \
+    cd .. && \
+    cd opencv && \
+    git checkout tags/4.5.5 && \
+    mkdir build && \
+    cd build && \
+    cmake \
+    -DCMAKE_INSTALL_PREFIX=/usr/local \
+    -DCMAKE_BUILD_TYPE=Release \
+    -D BUILD_opencv_python=OFF \
+    -D BUILD_opencv_python2=OFF \
+    -D BUILD_opencv_python3=OFF \
+    -DWITH_VTK=ON \
+    -DOPENCV_EXTRA_MODULES_PATH=$DIRPATH/opencv_contrib/modules \
+    .. && \
+make -j$(nproc) install
+
+ADD https://api.github.com/repos/borglab/gtsam/git/refs/heads/master version.json
+RUN git clone https://github.com/borglab/gtsam.git
+RUN cd gtsam && \
+    git checkout 4.1.1 && \
+    mkdir build && \
+    cd build && \
+    cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DGTSAM_USE_SYSTEM_EIGEN=OFF -DGTSAM_BUILD_TESTS=OFF -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DCMAKE_BUILD_TYPE=Release -DGTSAM_BUILD_UNSTABLE=ON -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON -DGTSAM_TANGENT_PREINTEGRATION=OFF .. && \
+    make -j$(nproc) install
+
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+# Загружаем версию разработки репозитория Open_GV
+RUN git clone https://github.com/laurentkneip/opengv.git && \
+    cd opengv && \
+    mkdir build && \
+    cd build && \
+    cmake \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=/usr/local \
+          -DEIGEN_INCLUDE_DIR=$DIRPATH/gtsam/gtsam/3rdparty/Eigen \
+          -DEIGEN_INCLUDE_DIRS=$DIRPATH/gtsam/gtsam/3rdparty/Eigen \
+          -DBUILD_SHARED_LIBS=ON \
+          .. && \
+    make -j$(nproc) install
+
+# Клонируем репозиторий DBoW2 и устанавливаем его
+RUN git clone https://github.com/dorian3d/DBoW2.git && \
+    cd DBoW2 && \
+    mkdir build && \
+    cd build && \
+    cmake \
+         -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release .. && \
+    make -j$(nproc) install
+
+# Загружаем версию разработки репозитория RobustPGO
+RUN git clone https://github.com/MIT-SPARK/Kimera-RPGO.git && \
+    cd Kimera-RPGO && \
+    mkdir build && \
+    cd build && \
+    cmake \
+          -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release .. && \
+    make -j$(nproc)  install
