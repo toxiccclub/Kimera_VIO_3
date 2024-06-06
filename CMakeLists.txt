@@ -138,7 +138,7 @@ add_subdirectory(src/visualizer)
 add_subdirectory(include/kimera-vio/third_party/triangle)
 add_subdirectory(src/third_party/triangle)
 
-add_subdirectory(3rd_party/NemaTode)
+##add_subdirectory(3rd_party/NemaTode)
 
 set(CMAKE_CXX_STANDARD 20)
 
