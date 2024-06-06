@@ -128,5 +128,6 @@ RUN git clone https://github.com/ckgt/NemaTode.git && \
     mkdir build &&\
     cd build && \
     cmake \
+          -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC" \
           -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release .. && \
     make -j$(nproc)  install
