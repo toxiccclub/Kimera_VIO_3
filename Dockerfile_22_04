@@ -34,28 +34,32 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Клонирование репозиториев OpenCV и OpenCV_contrib
-RUN git clone https://github.com/opencv/opencv.git && \
-    git clone https://github.com/opencv/opencv_contrib.git && \
-    cd opencv_contrib && \
-    git checkout tags/4.5.5 && \
-    cd .. && \
-    cd opencv && \
-    git checkout tags/4.5.5 && \
-    mkdir build && \
-    cd build && \
-    cmake \
-    -DCMAKE_SYSTEM_PROCESSOR=arm64 \
-    -DCMAKE_INSTALL_PREFIX=/usr/local \
-    -DCMAKE_BUILD_TYPE=Release \
-    -D BUILD_opencv_python=OFF \
-    -D BUILD_opencv_python2=OFF \
-    -D BUILD_opencv_python3=OFF \
-    -DWITH_VTK=ON \
-    -DOPENCV_EXTRA_MODULES_PATH=$DIRPATH/opencv_contrib/modules \
-    .. && \
-make -j$(nproc) install
+# Set environment variables for reuse
+ENV OPENCV_VERSION=4.5.5
 
+# Clone OpenCV repository
+RUN git clone https://github.com/opencv/opencv.git
+
+# Clone OpenCV contrib repository
+RUN git clone https://github.com/opencv/opencv_contrib.git
+
+# Checkout specific tags for both repositories
+RUN cd opencv && git checkout tags/$OPENCV_VERSION
+RUN cd opencv_contrib && git checkout tags/$OPENCV_VERSION
+
+# Build and install OpenCV
+RUN mkdir -p opencv/build && \
+    cd opencv/build && \
+    cmake -DCMAKE_SYSTEM_PROCESSOR=arm64 \
+          -DCMAKE_INSTALL_PREFIX=/usr/local \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_opencv_python=OFF \
+          -DBUILD_opencv_python2=OFF \
+          -DBUILD_opencv_python3=OFF \
+          -DWITH_VTK=ON \
+          -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
+          .. && \
+    make -j$(nproc) install
 
 # Устанавливаем переменную окружения для версии Boost
 ENV BOOST_VERSION=1.82.0 
