@@ -1,5 +1,5 @@
 # Указываем базовый образ для архитектуры ARM64
-FROM ubuntu:22.04
+FROM --platform=linux/arm64 ubuntu:22.04
 
 # Метаданные об обслуживании образа
 LABEL maintainer="mabate@mit.edu"
@@ -49,7 +49,7 @@ WORKDIR /root/boost_${BOOST_VERSION_UNDERSCORE}
 
 #Запускаем bootstrap и b2 для сборки и установки Boost 
 RUN ./bootstrap.sh --prefix=${BOOST_INSTALL_PREFIX} --with-libraries=all&& \ 
-    ./b2 install 
+    ./b2 toolset=gcc architecture=arm address-model=64 install -j$(nproc)
 
 # Экспортируем переменную среды BOOST_ROOT 
 ENV BOOST_ROOT=${BOOST_INSTALL_PREFIX} 
@@ -70,6 +70,7 @@ RUN git clone https://github.com/opencv/opencv.git && \
     mkdir build && \
     cd build && \
     cmake \
+    -DCMAKE_SYSTEM_PROCESSOR=arm64 \
     -DCMAKE_INSTALL_PREFIX=/usr/local \
     -DCMAKE_BUILD_TYPE=Release \
     -D BUILD_opencv_python=OFF \
@@ -86,7 +87,7 @@ RUN cd gtsam && \
     git checkout 4.1.1 && \
     mkdir build && \
     cd build && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DGTSAM_USE_SYSTEM_EIGEN=OFF -DGTSAM_BUILD_TESTS=OFF -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DCMAKE_BUILD_TYPE=Release -DGTSAM_BUILD_UNSTABLE=ON -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON -DGTSAM_TANGENT_PREINTEGRATION=OFF .. && \
+    cmake -DCMAKE_SYSTEM_PROCESSOR=arm64 -DCMAKE_INSTALL_PREFIX=/usr/local -DGTSAM_USE_SYSTEM_EIGEN=OFF -DGTSAM_BUILD_TESTS=OFF -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DCMAKE_BUILD_TYPE=Release -DGTSAM_BUILD_UNSTABLE=ON -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON -DGTSAM_TANGENT_PREINTEGRATION=OFF .. && \
     make -j$(nproc) install
 
 ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
@@ -97,6 +98,7 @@ RUN git clone https://github.com/laurentkneip/opengv.git && \
     mkdir build && \
     cd build && \
     cmake \
+          -DCMAKE_SYSTEM_PROCESSOR=arm64 \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_INSTALL_PREFIX=/usr/local \
           -DEIGEN_INCLUDE_DIR=$DIRPATH/gtsam/gtsam/3rdparty/Eigen \
@@ -111,7 +113,7 @@ RUN git clone https://github.com/dorian3d/DBoW2.git && \
     mkdir build && \
     cd build && \
     cmake \
-         -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release .. && \
+         -DCMAKE_SYSTEM_PROCESSOR=arm64 -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release .. && \
     make -j$(nproc) install
 
 # Загружаем версию разработки репозитория RobustPGO
@@ -120,7 +122,7 @@ RUN git clone https://github.com/MIT-SPARK/Kimera-RPGO.git && \
     mkdir build && \
     cd build && \
     cmake \
-          -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release .. && \
+          -DCMAKE_SYSTEM_PROCESSOR=arm64 -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release .. && \
     make -j$(nproc)  install
 
 RUN git clone https://github.com/ckgt/NemaTode.git && \
@@ -128,6 +130,7 @@ RUN git clone https://github.com/ckgt/NemaTode.git && \
     mkdir build &&\
     cd build && \
     cmake \
+          -DCMAKE_SYSTEM_PROCESSOR=arm64 \
           -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC" \
           -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release .. && \
     make -j$(nproc)  install
