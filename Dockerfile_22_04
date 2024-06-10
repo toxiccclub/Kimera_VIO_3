@@ -61,7 +61,7 @@ RUN rm -rf /root/boost_${BOOST_VERSION_UNDERSCORE}
 
 RUN git config --global http.postBuffer 1048576000
 # Клонирование репозиториев OpenCV и OpenCV_contrib
-RUN --depth 1 git clone https://github.com/opencv/opencv.git && \
+RUN git clone --depth 1  https://github.com/opencv/opencv.git && \
     git clone https://github.com/opencv/opencv_contrib.git && \
     cd opencv_contrib && \
     git checkout tags/4.5.5 && \
