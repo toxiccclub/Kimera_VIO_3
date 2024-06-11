@@ -47,8 +47,8 @@ pipeline {
                              -Wno-unused-parameter \
                              -Wno-unused-value \
                              -Wno-unused-variable" \
-                             -DGFLAGS_LIBRARY="/usr/lib/aarch64-linux-gnu/libgflags.so" \
-                             -DGFLAGS_INCLUDE_DIR="/usr/include/gflags"',
+                             -DGFLAGS_INCLUDE_DIR="/usr/include" \
+                             -DGFLAGS_LIBRARY="/usr/lib/aarch64-linux-gnu/libgflags.so"',
                            generator: 'Unix Makefiles', installation: 'InSearchPath',
                            sourceDir: '.', steps: [[args: '-j 4']]
               }
