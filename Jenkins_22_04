@@ -58,7 +58,7 @@ pipeline {
             stage('Test') {
               steps {
                wrap([$class: 'Xvfb']) {
-                  sh '''cd build && ./testKimeraVIO --gtest_output="xml:testresults.xml" --gtest_filter=-LCDFixture.detectLoop:LCDFixture.geometricVerificationCheck:LCDFixture.recoverPoseArun:MeshUtilsFixture.testRayIntersectAlgorithm
+                  sh '''cd build && ./testKimeraVIO --gtest_output="xml:testresults.xml" 
                   '''
 
                   // Process the CTest xml output
